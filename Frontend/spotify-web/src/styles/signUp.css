@@ -1,0 +1,178 @@
+
+.signup-wrapper {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  zoom: 0.94;
+  background-color: #121212;
+}
+
+.signup-body {
+  background-color: #121212;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  color: white;
+  text-align: center;
+}
+
+.logo {
+  margin-top: 80px;
+}
+
+.signup-title {
+  font-size: 45px;
+  margin-top: 15px;
+  margin-bottom: 35px;
+  line-height: 1.2;
+  font-weight: 850;
+}
+
+.input {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.enter-email {
+  font-size: 13px;
+  margin-bottom: 8px;
+  display: block;
+  text-align: left;
+  width: 300px;
+  font-weight: 700;
+}
+
+.email-input {
+  width: 300px;
+  height: 44px;
+  border: 1px solid rgb(124, 124, 124);
+  border-radius: 4px;
+  background-color: #121212;
+  color: white;
+  padding-left: 15px;
+  font-size: 15px;
+}
+
+.email-input:hover {
+  border-color: white;
+}
+
+.switchToPhone {
+  width: 300px;
+  text-align: left;
+  margin-top: 8px;
+  font-size: 14px;
+  color: #1ed760;
+  text-decoration: underline;
+}
+
+.next-button {
+  width: 310px;
+  padding: 13px 0;
+  border-radius: 50px;
+  border: none;
+  background-color: #1ed760;
+  color: #121212;
+  font-size: 15px;
+  font-weight: bold;
+  cursor: pointer;
+  margin-top: 25px;
+}
+
+.next-button:hover {
+  background-color: #3be477;
+  transform: scale(1.03);
+}
+
+.or {
+  margin: 24px 0;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.buttons {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.buttons button {
+  width: 310px;
+  padding: 15px 20px;
+  border-radius: 50px;
+  border: 1px solid rgb(124, 124, 124);
+  background-color: #121212;
+  color: white;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  position: relative;
+  justify-content: center;
+}
+
+.buttons button:hover {
+  border-color: white;
+  transform: scale(1.03);
+}
+
+.icon {
+  width: 20px;
+  height: 20px;
+  position: absolute;
+  left: 16px;
+}
+
+.back-switch {
+  background: none;
+  border: none;
+  color: rgb(179, 179, 179);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 4px;
+}
+
+.back-switch:hover {
+  color: white;
+}
+
+.login p {
+  margin-top: 60px;
+  font-weight: 500;
+  color: rgb(179, 179, 179);
+}
+
+.login-link {
+  color: white;
+  font-size: 15px;
+  font-weight: 700;
+  margin-top: 20px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  display: inline-block;
+}
+
+.login-link:hover {
+  transform: scale(1.08);
+}
+
+.terms-container {
+  margin-top: 100px;
+  font-size: 11px;
+  color: rgb(179, 179, 179);
+  line-height: 1.6;
+  padding-bottom: 72px;
+}
+
+.terms {
+  color: rgb(179, 179, 179);
+  text-decoration: underline;
+}
+
+.terms:hover {
+  color: #1ed760;
+}
