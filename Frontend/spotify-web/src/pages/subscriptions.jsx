@@ -1,5 +1,5 @@
 import React from 'react'
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import "../styles/subscriptions.css";
 import spotifyLogo from "../Images/spotify-Logo.png";
 import homeLogo from "../Images/house.png";
@@ -11,7 +11,9 @@ import Community from "../Images/Community.png";
 import Profile from "../Images/Profile.png";
 import add from "../Images/plus.png";
 
-const subscriptions = () => {
+
+const Subscriptions = () => {
+const navigate = useNavigate();
     const handlePayment = async (plan, amount) => {
     const token = localStorage.getItem("token");
     const orderRes = await fetch("http://localhost:8000/api/payment/create-order", {
@@ -24,7 +26,7 @@ const subscriptions = () => {
     });
     const order = await orderRes.json();
     const options = {
-        // key: "",
+        key: "rzp_test_SXnGN9aNaQwEHb",
         amount: order.amount,
         currency: "INR",
         order_id: order.id,
@@ -46,15 +48,15 @@ const subscriptions = () => {
     const rzp = new window.Razorpay(options);
     rzp.open();
 };
-
     return (
+        
         <div className='subscriptions-page'>
             <nav className="S-top-navbar">
                 <div className="S-nav-left">
                     <img src={spotifyLogo} alt="Spotify logo" className="S-nav-logo" />
                 </div>
                 <div className="S-nav-center">
-                    <div className="S-home-icon">
+                    <div className="S-home-icon" onClick={() => navigate("/home")}>
                         <img src={homeLogo} alt="Home" />
                     </div>
                     <div className="S-search-bar">
@@ -168,22 +170,22 @@ const subscriptions = () => {
                                 <div className="S-row">
                                     <div>Ad-free music listening</div>
                                     <div>-</div>
-                                    <div>✔</div>
+                                    <div>Yes</div>
                                 </div>
                                 <div className="S-row">
                                     <div>Play songs in any order</div>
                                     <div>-</div>
-                                    <div>✔</div>
+                                    <div>Yes</div>
                                 </div>
                                 <div className="S-row">
                                     <div>Very high audio quality</div>
                                     <div>-</div>
-                                    <div>✔</div>
+                                    <div>Yes</div>
                                 </div>
                                 <div className="S-row">
                                     <div>Listen with friends in real time</div>
                                     <div>-</div>
-                                    <div>✔</div>
+                                    <div>Yes</div>
                                 </div>
                             </div>
                         </div>
@@ -236,4 +238,4 @@ const subscriptions = () => {
     )
 }
 
-export default subscriptions
+export default Subscriptions

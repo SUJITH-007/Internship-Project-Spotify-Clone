@@ -64,6 +64,7 @@ const ContentCreator = () => {
     const [selectedOptions, setSelectedOptions] = useState([]);
     const [selectedGenres, setSelectedGenres] = useState([]);
     const [editTrack, setEditTrack] = useState(null);
+    
     const customSelectStyles = {
         control: (provided, state) => ({
             ...provided,

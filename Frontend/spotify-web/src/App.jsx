@@ -10,7 +10,7 @@ import SignupDOB from "./pages/signupDOB";
 import SignupTerms from "./pages/signupTerms";
 import ContentCreator from "./pages/contentCreator";
 import CreatorLogin from "./pages/creatorLogin";
-import Subscriptions from "./pages/subscriptions";
+import Subscriptions from "./pages/Subscriptions";
 
 export default function App() {
     return (

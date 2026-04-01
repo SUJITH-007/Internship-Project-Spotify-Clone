@@ -1,5 +1,5 @@
 import "../styles/Home.css";
-import { Link } from "react-router-dom";
+import { Link ,useNavigate} from "react-router-dom";
 import { useEffect, useState, useRef } from "react";
 import spotifyLogo from "../Images/spotify-Logo.png";
 import homeLogo from "../Images/house.png";
@@ -32,6 +32,7 @@ import LikePlus from "../Images/LikePlus.png";
 import Checkmark from "../Images/check.png";
 
 const Home = () => {
+    const navigate = useNavigate();
     const [tracks, setTracks] = useState([]);
     const [currentSong, setCurrentSong] = useState(null);
     const audioRef = useRef(null);
@@ -126,7 +127,7 @@ const Home = () => {
                     <img src={spotifyLogo} alt="Spotify logo" className="nav_logo" />
                 </div>
                 <div className="nav_center">
-                    <div className="home_icon">
+                    <div className="home_icon" onClick={() => navigate("/home")}>
                         <img src={homeLogo} alt="Home" />
                     </div>
                     <div className="search_bar">
