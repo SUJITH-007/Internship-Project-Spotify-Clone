@@ -1,5 +1,5 @@
 import "../styles/Home.css";
-import { Link ,useNavigate} from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useState, useRef } from "react";
 import spotifyLogo from "../Images/spotify-Logo.png";
 import homeLogo from "../Images/house.png";
@@ -44,6 +44,8 @@ const Home = () => {
     const [likedSongs, setLikedSongs] = useState([]);
     const [looping, setLoop] = useState(false);
     const [view, setView] = useState("home");
+    const [currentIndex, setCurrentIndex] = useState(0);
+    const [isShuffling, setIsShuffling] = useState(false);
 
     useEffect(() => {
         const token = localStorage.getItem("token");
@@ -52,31 +54,31 @@ const Home = () => {
             return;
         }
         fetch("http://localhost:8000/api/tracks", {
-    headers: {
-        Authorization: `Bearer ${token}`
-    }
-})
-    .then(async res => {
-        if (!res.ok) {
-            const text = await res.text();
-            console.error("Tracks fetch failed:", res.status, text);
-            setTracks([]);
-            return;
-        }
-        return res.json();
-    })
-    .then(data => {
-        if (Array.isArray(data)) {
-            setTracks(data);
-        } else {
-            console.error("Invalid tracks format:", data);
-            setTracks([]);
-        }
-    })
-    .catch(err => {
-        console.error("Tracks error:", err);
-        setTracks([]);
-    });
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
+        })
+            .then(async res => {
+                if (!res.ok) {
+                    const text = await res.text();
+                    console.error("Tracks fetch failed:", res.status, text);
+                    setTracks([]);
+                    return;
+                }
+                return res.json();
+            })
+            .then(data => {
+                if (Array.isArray(data)) {
+                    setTracks(data);
+                } else {
+                    console.error("Invalid tracks format:", data);
+                    setTracks([]);
+                }
+            })
+            .catch(err => {
+                console.error("Tracks error:", err);
+                setTracks([]);
+            });
         fetch("http://localhost:8000/api/likes", {
             headers: {
                 Authorization: `Bearer ${token}`
@@ -93,9 +95,21 @@ const Home = () => {
                 console.error("Likes error:", err);
                 setLikedSongs([]);
             })
-    }, []);
+    },
+        []);
+    useEffect(() => {
+        if (audioRef.current && currentSong) {
+            audioRef.current.load();
+            audioRef.current.play();
+        }
+    }, [currentSong]);
 
-    const playSong = (track) => { setCurrentSong(track); setIsPlaying(true); };
+    const playSong = (track) => {
+        const index = tracks.findIndex(t => t._id === track._id);
+        setCurrentIndex(index);
+        setCurrentSong(track);
+        setIsPlaying(true);
+    };
     const togglePlay = () => { if (!audioRef.current) return; if (isPlaying) { audioRef.current.pause(); } else { audioRef.current.play(); } setIsPlaying(!isPlaying); }
     const updateProgress = () => { const audio = audioRef.current; if (!audio) return; setCurrentTime(audio.currentTime); setDuration(audio.duration); setProgress((audio.currentTime / audio.duration) * 100); }
     const seekSong = (e) => { const audio = audioRef.current; if (!audio) return; const width = e.target.clientWidth; const clickX = e.nativeEvent.offsetX; audio.currentTime = (clickX / width) * audio.duration; }
@@ -119,7 +133,29 @@ const Home = () => {
             console.error(err);
         }
     };
-
+    const playNext = () => {
+        if (!tracks.length) return;
+        let nextIndex;
+        if (isShuffling) {
+            nextIndex = Math.floor(Math.random() * tracks.length);
+        } else {
+            nextIndex = (currentIndex + 1) % tracks.length;
+        }
+        setCurrentIndex(nextIndex);
+        setCurrentSong(tracks[nextIndex]);
+        setIsPlaying(true);
+    };
+    const playPrevious = () => {
+        if (!tracks.length) return;
+        let prevIndex = currentIndex - 1;
+        if (prevIndex < 0) prevIndex = tracks.length - 1;
+        setCurrentIndex(prevIndex);
+        setCurrentSong(tracks[prevIndex]);
+        setIsPlaying(true);
+    };
+    const toggleShuffle = () => {
+        setIsShuffling(!isShuffling);
+    };
     return (
         <div className="home-page">
             <nav className="top_navbar">
@@ -274,16 +310,16 @@ const Home = () => {
                             <div className="liked-list">
                                 <div className="Liked-section-header">
                                     <div className="Like-logo"><img src={Heart} className="liked-icon" alt="like icon" /></div>
-                                    <div className="like-details"> 
-                                    <p className="playlist-like">Playlist</p>
-                                    <h1 className="Like-heading">Liked Songs</h1>
-                                    <p className="username">Username</p>
+                                    <div className="like-details">
+                                        <p className="playlist-like">Playlist</p>
+                                        <h1 className="Like-heading">Liked Songs</h1>
+                                        <p className="username">Username</p>
                                     </div>
                                 </div>
                                 {likedSongs.map((track, index) => (
                                     <div key={track._id} className="liked-row" onClick={() => playSong(track)}>
                                         <span className="liked-index">{index + 1}</span>
-                                        <img src={`http://localhost:8000/${track.thumbnail}`}className="liked-img"/>
+                                        <img src={`http://localhost:8000/${track.thumbnail}`} className="liked-img" />
                                         <div className="liked-info">
                                             <p className="liked-title">{track.title}</p>
                                             <p className="liked-artist">{track.artists?.join(", ")}</p>
@@ -342,13 +378,13 @@ const Home = () => {
                         </div>
                         <div className="player-center">
                             <div className="controlButtons">
-                                <button className="shuffleButton"><img src={ShuffleButton} className="ShuffleButton" alt="Shuffle" /></button>
-                                <button className="previousButton"><img src={PreviousButton} className="PreviousButton" alt="previous" /></button>
+                                <button className={`shuffleButton ${isShuffling ? "active" : ""}`} onClick={toggleShuffle}><img src={ShuffleButton} className="ShuffleButton" /></button>
+                                <button className="previousButton" onClick={playPrevious}><img src={PreviousButton} className="PreviousButton" alt="previous" /></button>
                                 <button className="playButton" onClick={togglePlay}>
                                     {isPlaying ? <img src={PauseButton} className="PauseButton" /> : <img src={SongPlayButton} className="SongPlay" />}
                                 </button>
-                                <button className="nextButton"><img src={NextButton} className="Nextbutton" alt="Next" /></button>
-                                <button className="loopButton">{looping ? <img src={LoopButton} className="LoopButton" /> : <img src={LoopSlected} className="loopSelected" onClick={() => setLoop(!looping)} />} </button>
+                                <button className="nextButton" onClick={playNext}><img src={NextButton} className="Nextbutton" alt="Next" /></button>
+                                <button className="loopButton" onClick={() => setLoop(!looping)}><img src={looping ? LoopSlected : LoopButton} className={looping ? "loopSelected" : "LoopButton"}/></button>
                             </div>
                             <div className="progress-row">
                                 <span className="time">{formatTime(currentTime)}</span>
@@ -357,7 +393,7 @@ const Home = () => {
                                 </div>
                                 <span className="time">{formatTime(duration)}</span>
                             </div>
-                            <audio ref={audioRef} className="audio-element" autoPlay onTimeUpdate={updateProgress} src={`http://localhost:8000/${currentSong.audioFile}`} />
+                            <audio ref={audioRef} className="audio-element" autoPlay loop={looping} onTimeUpdate={updateProgress} onEnded={!looping ? playNext : null} src={`http://localhost:8000/${currentSong.audioFile}`} />
                         </div>
                         <div className="player-right">
                             <div className="Microphone"><img src={Microphone} className="microphone" alt="mic" /></div>

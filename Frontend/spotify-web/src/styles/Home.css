@@ -264,10 +264,27 @@
   margin-left: 15px;
 }
 
+.LoopButton,
+.loopSelected {
+  width: 20px;
+  height: 20px;
+}
+
+.loopButton img {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+}
+
 .like-div:hover{
   cursor: pointer;
   transform: scale(1.08);
 }
+
+.shuffleButton.active {
+  filter: brightness(1.5);
+}
+
 .like-icon:hover{
   cursor: pointer;
   transform: scale(1.08);
