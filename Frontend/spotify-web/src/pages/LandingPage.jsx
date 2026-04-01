@@ -10,7 +10,7 @@ import Luzroja from "../Images/Songs/Luzroja.jpg";
 import vocenamira from "../Images/Songs/vocenamira.jpg";
 import MJ from "../Images/Artists/MJ.jpg";
 import weekend from "../Images/Artists/weekend.jpg";
-import Thinkingofyou from "../Images/songs/Thinkingofyou.jpg";
+import Thinkingofyou from "../Images/Songs/Thinkingofyou.jpg";
 import Arijit from "../Images/Artists/Arijit_singh.jpg"
 import Adele from "../Images/Artists/adele.jpg";
 import AVA from "../Images/Artists/AVA.jpg";
