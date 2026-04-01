@@ -25,7 +25,9 @@ const artists = [
     { value: "Marshmello", label: "Marshmello" },
     { value: "MIIA", label: "MIIA" },
     { value: "NCTS", label: "NCTS" },
-    { value: "Shreya Ghoshal", label: "Shreya Ghoshal" }
+    { value: "Shreya Ghoshal", label: "Shreya Ghoshal" },
+    {value: "vyravl", label:"vyravl"} 
+
 ];
 
 const genres = [
