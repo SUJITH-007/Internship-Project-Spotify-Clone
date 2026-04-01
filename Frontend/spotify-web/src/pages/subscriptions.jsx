@@ -13,10 +13,11 @@ import add from "../Images/plus.png";
 
 
 const Subscriptions = () => {
-const navigate = useNavigate();
+    const navigate = useNavigate();
+    const API= import.meta.env.VITE_API;
     const handlePayment = async (plan, amount) => {
     const token = localStorage.getItem("token");
-    const orderRes = await fetch("http://localhost:8000/api/payment/create-order", {
+    const orderRes = await fetch(`${API}/api/payment/create-order`, {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
@@ -31,7 +32,7 @@ const navigate = useNavigate();
         currency: "INR",
         order_id: order.id,
         handler: async function (response) {
-            await fetch("http://localhost:8000/api/payment/verify", {
+            await fetch(`${API}/api/payment/verify`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",

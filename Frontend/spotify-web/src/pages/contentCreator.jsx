@@ -64,7 +64,8 @@ const ContentCreator = () => {
     const [selectedOptions, setSelectedOptions] = useState([]);
     const [selectedGenres, setSelectedGenres] = useState([]);
     const [editTrack, setEditTrack] = useState(null);
-    
+    const API=import.meta.env.VITE_API;
+
     const customSelectStyles = {
         control: (provided, state) => ({
             ...provided,
@@ -153,7 +154,7 @@ const ContentCreator = () => {
         const fetchTracks = async () => {
             try {
                 const token = localStorage.getItem("token");
-                const res = await fetch("http://localhost:8000/api/tracks", {
+                const res = await fetch(`${API}/api/tracks`, {
                     headers: {
                         Authorization: `Bearer ${token}`
                     }
@@ -204,7 +205,7 @@ const ContentCreator = () => {
             formData.append("thumbnail", thumbnailFile);
             formData.append("audio", audioFile);
             const token = localStorage.getItem("token");
-            const response = await fetch("http://localhost:8000/api/tracks/add", {
+            const response = await fetch(`${API}/api/tracks/add`, {
                 method: "POST",
                 headers: {
                     Authorization: `Bearer ${token}`
@@ -236,7 +237,7 @@ const ContentCreator = () => {
     const handleDelete = async (id) => {
         try {
             const token = localStorage.getItem("token");
-            const res = await fetch(`http://localhost:8000/api/tracks/${id}`, {
+            const res = await fetch(`${API}/api/tracks/${id}`, {
                 method: "DELETE",
                 headers: {
                     Authorization: `Bearer ${token}`
@@ -260,7 +261,7 @@ const ContentCreator = () => {
                 formData.append("thumbnail", editTrack.newThumbnail);
             }
             const res = await fetch(
-                `http://localhost:8000/api/tracks/${editTrack._id}`,
+                `${API}/api/tracks/${editTrack._id}`,
                 {
                     method: "PUT",
                     body: formData
@@ -318,7 +319,7 @@ const ContentCreator = () => {
                                 </div>
                                 {filteredTracks.map(track => (
                                     <div key={track._id} className="dashboard-track-row">
-                                        <img src={`http://localhost:8000/${track.thumbnail}`} alt={track.title} className="dashboard-thumb" />
+                                        <img src={`${API}/${track.thumbnail}`} alt={track.title} className="dashboard-thumb" />
                                         <div className="dashboard-col">
                                             {track.title}
                                         </div>
@@ -413,7 +414,7 @@ const ContentCreator = () => {
                             <>
                                 {tracks.map(track => (
                                     <div key={track._id} className="track-card">
-                                        <img src={`http://localhost:8000/${track.thumbnail}`} alt={track.title} className="track-thumb" />
+                                        <img src={`${API}/${track.thumbnail}`} alt={track.title} className="track-thumb" />
                                         <div className="track-info">
                                             <h4>{track.title}</h4>
                                             <p>{track.artists?.join(", ")}</p>

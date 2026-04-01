@@ -14,6 +14,7 @@ function SignupTerms() {
   const [marketingOptOut, setMarketingOptOut] = useState(false);
   const [shareDataWithProviders, setShareDataWithProviders] = useState(false);
   const isFormValid = marketingOptOut && shareDataWithProviders;
+  const API= import.meta.env.VITE_API;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -24,7 +25,7 @@ function SignupTerms() {
       return;
     }
     try {
-      const res = await axios.post("http://localhost:8000/api/auth/register", {
+      const res = await axios.post(`${API}/api/auth/register`, {
         email,
         password,
         username: name,

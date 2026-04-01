@@ -46,6 +46,7 @@ const Home = () => {
     const [view, setView] = useState("home");
     const [currentIndex, setCurrentIndex] = useState(0);
     const [isShuffling, setIsShuffling] = useState(false);
+    const API= import.meta.env.VITE_API;
 
     useEffect(() => {
         const token = localStorage.getItem("token");
@@ -53,7 +54,7 @@ const Home = () => {
             window.location.href = "/login";
             return;
         }
-        fetch("http://localhost:8000/api/tracks", {
+        fetch(`${API}/api/tracks`, {
             headers: {
                 Authorization: `Bearer ${token}`
             }
@@ -79,7 +80,7 @@ const Home = () => {
                 console.error("Tracks error:", err);
                 setTracks([]);
             });
-        fetch("http://localhost:8000/api/likes", {
+        fetch(`${API}/api/likes`, {
             headers: {
                 Authorization: `Bearer ${token}`
             }
@@ -119,7 +120,7 @@ const Home = () => {
         : tracks.slice(-15);
     const toggleLike = async (trackId) => {
         try {
-            const res = await fetch("http://localhost:8000/api/likes", {
+            const res = await fetch(`${API}/api/likes`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -244,7 +245,7 @@ const Home = () => {
                                 <div className={`section_box ${showAll ? "grid_view" : "scroll_view"}`}>
                                     {visibleTracks.map((track) => (
                                         <div key={track._id} className="track_card" onClick={() => playSong(track)}>
-                                            <img src={`http://localhost:8000/${track.thumbnail}`} alt="cover" className="track_cover" />
+                                            <img src={`${API}/${track.thumbnail}`} alt="cover" className="track_cover" />
                                             <p className="track_title">{track.title}</p>
                                             <p className="track_artist">{track.artists?.join(", ")}</p>
                                         </div>
@@ -319,7 +320,7 @@ const Home = () => {
                                 {likedSongs.map((track, index) => (
                                     <div key={track._id} className="liked-row" onClick={() => playSong(track)}>
                                         <span className="liked-index">{index + 1}</span>
-                                        <img src={`http://localhost:8000/${track.thumbnail}`} className="liked-img" />
+                                        <img src={`${API}/${track.thumbnail}`} className="liked-img" />
                                         <div className="liked-info">
                                             <p className="liked-title">{track.title}</p>
                                             <p className="liked-artist">{track.artists?.join(", ")}</p>
@@ -339,7 +340,7 @@ const Home = () => {
                                 </div>
                                 <div className="rightpanel-image">
                                     <img
-                                        src={`http://localhost:8000/${currentSong.thumbnail}`}
+                                        src={`${API}/${currentSong.thumbnail}`}
                                         alt="cover"
                                     />
                                 </div>
@@ -362,7 +363,7 @@ const Home = () => {
                 {currentSong && (
                     <div className="player-container">
                         <div className="player-left">
-                            <img src={`http://localhost:8000/${currentSong.thumbnail}`} alt="cover" className="player-cover" />
+                            <img src={`${API}/${currentSong.thumbnail}`} alt="cover" className="player-cover" />
                             <div className="player-song-info">
                                 <div className="player-title">{currentSong.title}</div>
                                 <div className="player-artist">{currentSong.artists?.join(", ")}</div>
@@ -393,7 +394,7 @@ const Home = () => {
                                 </div>
                                 <span className="time">{formatTime(duration)}</span>
                             </div>
-                            <audio ref={audioRef} className="audio-element" autoPlay loop={looping} onTimeUpdate={updateProgress} onEnded={!looping ? playNext : null} src={`http://localhost:8000/${currentSong.audioFile}`} />
+                            <audio ref={audioRef} className="audio-element" autoPlay loop={looping} onTimeUpdate={updateProgress} onEnded={!looping ? playNext : null} src={`${API}/${currentSong.audioFile}`} />
                         </div>
                         <div className="player-right">
                             <div className="Microphone"><img src={Microphone} className="microphone" alt="mic" /></div>

@@ -8,6 +8,7 @@ function LoginPassword() {
     const email = location.state?.email;
     const [password, setPassword] = useState("");
     const [loading, setLoading] = useState(false);
+    const API =import.meta.env.VITE_API;
     useEffect(() => {
         if (!email) {
             navigate("/login");
@@ -21,7 +22,7 @@ function LoginPassword() {
         }
         try {
             setLoading(true);
-            const response = await fetch("http://localhost:8000/api/auth/login", {
+            const response = await fetch(`${API}/api/auth/login`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",

@@ -54,7 +54,7 @@ import VoceNaMira from "../Images/Albums/VoceNaMira.jpg";
 import Salaar from "../Images/Albums/Salaar.jpg";
 import Dare from "../Images/Albums/Dare.jpg";
 
-function Landing() {
+function landingPage() {
     return (
         <div className="landing-page">
             <nav className="top-navbar">
@@ -553,4 +553,4 @@ function Landing() {
     );
 }
 
-export default Landing;
+export default landingPage;
