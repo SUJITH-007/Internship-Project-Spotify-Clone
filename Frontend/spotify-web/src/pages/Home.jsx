@@ -104,7 +104,9 @@ const Home = () => {
             audioRef.current.play();
         }
     }, [currentSong]);
-
+    const [user, setUser] = useState(
+        user
+    );
     const playSong = (track) => {
         const index = tracks.findIndex(t => t._id === track._id);
         setCurrentIndex(index);
@@ -162,14 +164,12 @@ const Home = () => {
     const [newImage, setNewImage] = useState(null);
     const updateProfile = async () => {
         const token = localStorage.getItem("token");
-
         const formData = new FormData();
         formData.append("username", newName);
         formData.append("password", newPassword);
         if (newImage) {
             formData.append("profileImage", newImage);
         }
-
         const res = await fetch(`${API}/api/user/update`, {
             method: "PUT",
             headers: {
@@ -177,11 +177,9 @@ const Home = () => {
             },
             body: formData
         });
-
         const data = await res.json();
-
         localStorage.setItem("user", JSON.stringify(data.user));
-
+        setUser(data.user);
         alert("Profile Updated");
     };
     return (
@@ -214,7 +212,7 @@ const Home = () => {
                         <img src={Community} className="CommunityLogo" alt="Community" />
                     </div>
                     <div className="Profile" onClick={() => setView("profile")}>
-                        <img src={Profile} className="Profile-img" alt="Profile" />
+                        <img src={user?.profileImage ? `${API}/${user.profileImage}` : Profile} className="Profile-img"alt="Profile"/>
                     </div>
                 </div>
             </nav>
