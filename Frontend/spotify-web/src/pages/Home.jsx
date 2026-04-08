@@ -105,7 +105,7 @@ const Home = () => {
         }
     }, [currentSong]);
     const [user, setUser] = useState(
-        user
+        JSON.parse(localStorage.getItem("user"))
     );
     const playSong = (track) => {
         const index = tracks.findIndex(t => t._id === track._id);
@@ -212,7 +212,7 @@ const Home = () => {
                         <img src={Community} className="CommunityLogo" alt="Community" />
                     </div>
                     <div className="Profile" onClick={() => setView("profile")}>
-                        <img src={user?.profileImage ? `${API}/${user.profileImage}` : Profile} className="Profile-img"alt="Profile"/>
+                        <img src={user?.profileImage ? `${API}/${user.profileImage}` : Profile} className="Profile-img" alt="Profile" />
                     </div>
                 </div>
             </nav>
@@ -362,19 +362,19 @@ const Home = () => {
                             <div className="profile-container">
                                 <div className="profile-header">
                                     <img
-                                        src={`${API}/${JSON.parse(localStorage.getItem("user"))?.profileImage}`}
+                                        src={user?.profileImage ? `${API}/${user.profileImage}` : Profile}
                                         className="profile-avatar"
                                     />
                                     <input type="file" onChange={(e) => setNewImage(e.target.files[0])} />
                                     <div className="profile-info">
                                         <h1 className="profile-name">
-                                            {JSON.parse(localStorage.getItem("user"))?.username || "User"}
+                                            {user?.username || "User"}
                                         </h1>
                                         <p className="profile-email">
-                                            {JSON.parse(localStorage.getItem("user"))?.email}
+                                            {user?.email}
                                         </p>
                                         <p className="profile-plan">
-                                            Plan: {JSON.parse(localStorage.getItem("user"))?.subscription?.plan || "free"}
+                                            Plan: {user?.subscription?.plan || "free"}
                                         </p>
                                     </div>
                                     <div className="profile-edit">
