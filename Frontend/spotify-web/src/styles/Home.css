@@ -1358,3 +1358,34 @@ border-radius:2px;
   margin-top: 2px;
   text-decoration: none;
 }
+
+.profile-container {
+  padding: 40px;
+}
+
+.profile-header {
+  display: flex;
+  align-items: center;
+  gap: 30px;
+}
+
+.profile-avatar {
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+}
+
+.profile-name {
+  font-size: 40px;
+  font-weight: 700;
+}
+
+.profile-email {
+  color: #b3b3b3;
+  margin-top: 5px;
+}
+
+.profile-plan {
+  margin-top: 10px;
+  font-weight: 600;
+}

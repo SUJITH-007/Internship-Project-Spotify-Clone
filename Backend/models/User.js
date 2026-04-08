@@ -45,6 +45,10 @@ const userSchema = new mongoose.Schema(
             startDate: Date,
             endDate: Date,
         },
+        profileImage: {
+            type: String,
+            default: "uploads/images/default.png",
+        },
     },
     { timestamps: true }
 );

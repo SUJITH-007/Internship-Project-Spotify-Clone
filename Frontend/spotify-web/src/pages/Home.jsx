@@ -46,7 +46,7 @@ const Home = () => {
     const [view, setView] = useState("home");
     const [currentIndex, setCurrentIndex] = useState(0);
     const [isShuffling, setIsShuffling] = useState(false);
-    const API= import.meta.env.VITE_API;
+    const API = import.meta.env.VITE_API;
 
     useEffect(() => {
         const token = localStorage.getItem("token");
@@ -157,6 +157,33 @@ const Home = () => {
     const toggleShuffle = () => {
         setIsShuffling(!isShuffling);
     };
+    const [newName, setNewName] = useState("");
+    const [newPassword, setNewPassword] = useState("");
+    const [newImage, setNewImage] = useState(null);
+    const updateProfile = async () => {
+        const token = localStorage.getItem("token");
+
+        const formData = new FormData();
+        formData.append("username", newName);
+        formData.append("password", newPassword);
+        if (newImage) {
+            formData.append("profileImage", newImage);
+        }
+
+        const res = await fetch(`${API}/api/user/update`, {
+            method: "PUT",
+            headers: {
+                Authorization: `Bearer ${token}`
+            },
+            body: formData
+        });
+
+        const data = await res.json();
+
+        localStorage.setItem("user", JSON.stringify(data.user));
+
+        alert("Profile Updated");
+    };
     return (
         <div className="home-page">
             <nav className="top_navbar">
@@ -186,7 +213,7 @@ const Home = () => {
                     <div className="Community">
                         <img src={Community} className="CommunityLogo" alt="Community" />
                     </div>
-                    <div className="Profile">
+                    <div className="Profile" onClick={() => setView("profile")}>
                         <img src={Profile} className="Profile-img" alt="Profile" />
                     </div>
                 </div>
@@ -330,6 +357,45 @@ const Home = () => {
                             </div>
                         </div>
                     )}
+                    {view === "profile" && (
+
+                        <div className="home_section">
+                            <button onClick={() => setView("home")}>Back</button>
+                            <div className="profile-container">
+                                <div className="profile-header">
+                                    <img
+                                        src={`${API}/${JSON.parse(localStorage.getItem("user"))?.profileImage}`}
+                                        className="profile-avatar"
+                                    />
+                                    <input type="file" onChange={(e) => setNewImage(e.target.files[0])} />
+                                    <div className="profile-info">
+                                        <h1 className="profile-name">
+                                            {JSON.parse(localStorage.getItem("user"))?.username || "User"}
+                                        </h1>
+                                        <p className="profile-email">
+                                            {JSON.parse(localStorage.getItem("user"))?.email}
+                                        </p>
+                                        <p className="profile-plan">
+                                            Plan: {JSON.parse(localStorage.getItem("user"))?.subscription?.plan || "free"}
+                                        </p>
+                                    </div>
+                                    <div className="profile-edit">
+                                        <input
+                                            type="text"
+                                            placeholder="New Name"
+                                            onChange={(e) => setNewName(e.target.value)}
+                                        />
+                                        <input
+                                            type="password"
+                                            placeholder="New Password"
+                                            onChange={(e) => setNewPassword(e.target.value)}
+                                        />
+                                        <button onClick={updateProfile}>Save Changes</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </main>
                 <aside className="home_rightpanel">
                     <div className="rightpanel-container">
@@ -385,7 +451,7 @@ const Home = () => {
                                     {isPlaying ? <img src={PauseButton} className="PauseButton" /> : <img src={SongPlayButton} className="SongPlay" />}
                                 </button>
                                 <button className="nextButton" onClick={playNext}><img src={NextButton} className="Nextbutton" alt="Next" /></button>
-                                <button className="loopButton" onClick={() => setLoop(!looping)}><img src={looping ? LoopSlected : LoopButton} className={looping ? "loopSelected" : "LoopButton"}/></button>
+                                <button className="loopButton" onClick={() => setLoop(!looping)}><img src={looping ? LoopSlected : LoopButton} className={looping ? "loopSelected" : "LoopButton"} /></button>
                             </div>
                             <div className="progress-row">
                                 <span className="time">{formatTime(currentTime)}</span>

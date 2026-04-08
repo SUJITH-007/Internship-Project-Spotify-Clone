@@ -6,6 +6,7 @@ const subscriptionRoutes = require("./routes/subscriptionRoutes");
 const authRoutes = require("./routes/authRoutes");
 const likeRoutes = require("./routes/likeRoutes");
 const paymentRoutes = require("./routes/paymentRoutes");
+const userRoutes = require("./routes/userRoutes");
 
 const app = express();
 
@@ -24,6 +25,7 @@ app.use("/uploads", express.static("uploads"));
 app.use("/api/likes",likeRoutes)
 app.use("/api/subscription", subscriptionRoutes);
 app.use("/api/payment", paymentRoutes);
+app.use("/api/user", userRoutes);
 
 const PORT = process.env.PORT;
 app.listen(PORT, () => {
