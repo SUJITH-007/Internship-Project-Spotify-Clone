@@ -26,6 +26,7 @@ app.use("/api/likes",likeRoutes)
 app.use("/api/subscription", subscriptionRoutes);
 app.use("/api/payment", paymentRoutes);
 app.use("/api/user", userRoutes);
+app.use("/uploads_bulk", express.static("uploads_bulk"));
 
 const PORT = process.env.PORT;
 app.listen(PORT, () => {

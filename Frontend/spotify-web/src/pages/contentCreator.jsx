@@ -26,7 +26,7 @@ const artists = [
     { value: "MIIA", label: "MIIA" },
     { value: "NCTS", label: "NCTS" },
     { value: "Shreya Ghoshal", label: "Shreya Ghoshal" },
-    {value: "vyravl", label:"vyravl"} 
+    { value: "vyravl", label: "vyravl" }
 
 ];
 
@@ -59,6 +59,7 @@ const ContentCreator = () => {
     const [thumbnailFile, setThumbnailFile] = useState(null);
     const [audioFileName, setAudioFileName] = useState("");
     const [audioFile, setAudioFile] = useState(null);
+    const [bulkFile, setBulkFile] = useState(null);
     const [title, setTitle] = useState("");
     const [album, setAlbum] = useState("");
     const [publishStatus, setPublishStatus] = useState(false);
@@ -66,7 +67,7 @@ const ContentCreator = () => {
     const [selectedOptions, setSelectedOptions] = useState([]);
     const [selectedGenres, setSelectedGenres] = useState([]);
     const [editTrack, setEditTrack] = useState(null);
-    const API=import.meta.env.VITE_API;
+    const API = import.meta.env.VITE_API;
 
     const customSelectStyles = {
         control: (provided, state) => ({
@@ -150,6 +151,12 @@ const ContentCreator = () => {
         if (file) {
             setAudioFileName(file.name);
             setAudioFile(file);
+        }
+    };
+    const handleBulkFileChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            setBulkFile(file);
         }
     };
     React.useEffect(() => {
@@ -236,6 +243,34 @@ const ContentCreator = () => {
         }
     };
 
+    const handleBulkUpload = async () => {
+        if (!bulkFile) {
+            alert("Please select a file");
+            return;
+        }
+        try {
+            const formData = new FormData();
+            formData.append("file", bulkFile);
+            const token = localStorage.getItem("token");
+            const res = await fetch(`${API}/api/tracks/bulk`, {
+                method: "POST",
+                headers: {
+                    Authorization: `Bearer ${token}`
+                },
+                body: formData
+            });
+            const data = await res.json();
+            if (res.ok) {
+                alert("Bulk upload successful!");
+            } else {
+                alert(data.message || "Bulk upload failed");
+            }
+        } catch (err) {
+            console.error(err);
+            alert("Something went wrong");
+        }
+    };
+
     const handleDelete = async (id) => {
         try {
             const token = localStorage.getItem("token");
@@ -292,6 +327,7 @@ const ContentCreator = () => {
                 <ul>
                     <li onClick={() => setActiveTab("dashboard")}>Dashboard</li>
                     <li onClick={() => setActiveTab("add")}>Add Music</li>
+                    <li onClick={() => setActiveTab("bulk")}>Bulk Upload</li>
                     <li onClick={() => setActiveTab("tracks")}>All Tracks</li>
                     <li onClick={() => setActiveTab("analytics")}>Analytics</li>
                     <li onClick={handleLogout}>Logout</li>
@@ -405,6 +441,27 @@ const ContentCreator = () => {
                             </div>
                             <button type="submit">Add Track</button>
                         </form>
+                    </section>
+                )}
+                {activeTab === "bulk" && (
+                    <section className="add-music-section">
+                        <h2>Bulk Upload Tracks</h2>
+                        <div className="music-form">
+                            <label className="file-upload">
+                                <input
+                                    type="file"
+                                    accept=".csv,.xlsx"
+                                    onChange={handleBulkFileChange}
+                                />
+                                <span>Select CSV File</span>
+                            </label>
+                            {bulkFile && (
+                                <p className="file-name">{bulkFile.name}</p>
+                            )}
+                            <button onClick={handleBulkUpload}>
+                                Upload in Bulk
+                            </button>
+                        </div>
                     </section>
                 )}
                 {activeTab === "tracks" && (

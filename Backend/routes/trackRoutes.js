@@ -1,13 +1,15 @@
 const express = require("express");
 const router = express.Router();
 const protect = require("../middleware/authMiddleware");
-const upload = require("../middleware/uploadMiddleware");
+const { upload, bulkUpload } = require("../middleware/uploadMiddleware");
 const Track = require("../models/Track");
-const User = require("../models/User"); 
+const User = require("../models/User");
 const fs = require("fs");
+const csv = require("csv-parser");
+const path = require("path");
 
 router.post(
-    "/add",protect,upload.fields([
+    "/add", protect, upload.fields([
         { name: "thumbnail", maxCount: 1 },
         { name: "audio", maxCount: 1 },
     ]),
@@ -40,9 +42,61 @@ router.post(
     }
 );
 
+router.post(
+    "/bulk",
+    protect,
+    bulkUpload.single("file"),
+    async (req, res) => {
+        try {
+            if (!req.file) {
+                return res.status(400).json({ message: "No file uploaded" });
+            }
+            const results = [];
+            const filePath = req.file.path;
+            fs.createReadStream(filePath)
+                .pipe(csv())
+                .on("data", (row) => {
+                    results.push(row);
+                })
+                .on("end", async () => {
+                    try {
+                        for (let song of results) {
+                            const audioPath = path.join("uploads_bulk", song.audioPath);
+                            const imagePath = path.join("uploads_bulk", song.imagePath);
+                            if (!fs.existsSync(audioPath) || !fs.existsSync(imagePath)) {
+                                console.log("File missing for:", song.title);
+                                continue;
+                            }
+                            const newTrack = new Track({
+                                title: song.title,
+                                artists: JSON.parse(song.artists),
+                                genres: JSON.parse(song.genres),
+                                album: song.album,
+                                published: song.published === "true",
+                                isPremium: song.isPremium === "true",
+                                uploader: req.user,
+                                thumbnail: imagePath,
+                                audioFile: audioPath,
+                            });
+                            await newTrack.save();
+                        }
+                        res.json({
+                            message: "Bulk upload successful",
+                            count: results.length
+                        });
+                    } catch (err) {
+                        res.status(500).json({ message: err.message });
+                    }
+                });
+        } catch (error) {
+            res.status(500).json({ error: error.message });
+        }
+    }
+);
+
 router.get("/", protect, async (req, res) => {
     try {
-        const user = await User.findById(req.user); 
+        const user = await User.findById(req.user);
         let tracks;
         if (user.subscription && user.subscription.plan === "free") {
             tracks = await Track.find({ isPremium: false })

@@ -8,29 +8,23 @@ const bcrypt = require("bcryptjs");
 router.put(
     "/update",
     protect,
-    upload.single("profileImage"),
+    // upload.single("profileImage"),  for profile updation i need to un-comment it later
     async (req, res) => {
         try {
             const user = await User.findById(req.user);
-
             if (!user) {
                 return res.status(404).json({ message: "User not found" });
             }
-
             if (req.body.username) {
                 user.username = req.body.username;
             }
-
             if (req.body.password) {
                 user.password = await bcrypt.hash(req.body.password, 10);
             }
-
             if (req.file) {
                 user.profileImage = req.file.path;
             }
-
             await user.save();
-
             res.json({
                 message: "Profile updated",
                 user
