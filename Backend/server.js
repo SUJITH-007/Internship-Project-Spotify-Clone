@@ -10,7 +10,11 @@ const userRoutes = require("./routes/userRoutes");
 
 const app = express();
 
-app.use(cors());
+app.use(cors({
+  origin: "http://localhost:3000", 
+  credentials: true
+}));
+
 app.use(express.json());
 
 mongoose.connect(process.env.MONGO_URI)
@@ -27,6 +31,8 @@ app.use("/api/subscription", subscriptionRoutes);
 app.use("/api/payment", paymentRoutes);
 app.use("/api/user", userRoutes);
 app.use("/uploads_bulk", express.static("uploads_bulk"));
+const playlistRoutes = require("./routes/playlistRoutes");
+app.use("/api/playlists", playlistRoutes);
 
 const PORT = process.env.PORT;
 app.listen(PORT, () => {

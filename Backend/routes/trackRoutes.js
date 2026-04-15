@@ -47,22 +47,31 @@ router.post(
     protect,
     bulkUpload.single("file"),
     async (req, res) => {
+        console.log("=== BULK UPLOAD HIT ===");
         try {
+            console.log("REQ FILE:", req.file);
             if (!req.file) {
                 return res.status(400).json({ message: "No file uploaded" });
             }
             const results = [];
             const filePath = req.file.path;
+            console.log("Uploaded file path:", filePath);
+            let responded = false; 
             fs.createReadStream(filePath)
                 .pipe(csv())
                 .on("data", (row) => {
+                    console.log("Row:", row);
                     results.push(row);
                 })
                 .on("end", async () => {
+                    console.log("CSV reading finished");
                     try {
+                        let successCount = 0;
                         for (let song of results) {
                             const audioPath = path.join("uploads_bulk", song.audioPath);
                             const imagePath = path.join("uploads_bulk", song.imagePath);
+                            console.log("Final paths:", audioPath, imagePath);
+                            console.log("Checking:", audioPath, imagePath);
                             if (!fs.existsSync(audioPath) || !fs.existsSync(imagePath)) {
                                 console.log("File missing for:", song.title);
                                 continue;
@@ -79,17 +88,34 @@ router.post(
                                 audioFile: audioPath,
                             });
                             await newTrack.save();
+                            successCount++;
                         }
-                        res.json({
+                        responded = true;
+                        return res.json({
                             message: "Bulk upload successful",
-                            count: results.length
+                            totalRows: results.length,
+                            uploaded: successCount,
                         });
                     } catch (err) {
-                        res.status(500).json({ message: err.message });
+                        responded = true;
+                        console.error("Processing error:", err);
+                        return res.status(500).json({ message: err.message });
                     }
+                })
+                .on("error", (err) => {
+                    responded = true;
+                    console.error("CSV read error:", err);
+                    return res.status(500).json({ message: "CSV read failed" });
                 });
+            setTimeout(() => {
+                if (!responded) {
+                    console.log("TIMEOUT: CSV stuck, forcing response");
+                    return res.status(500).json({ message: "CSV processing timeout" });
+                }
+            }, 10000);
         } catch (error) {
-            res.status(500).json({ error: error.message });
+            console.error("Bulk upload error:", error);
+            return res.status(500).json({ message: error.message });
         }
     }
 );

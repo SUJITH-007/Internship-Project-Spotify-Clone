@@ -30,6 +30,7 @@ import Expand from "../Images/expand.png";
 import SpotifyAds from "../Images/Spotify_ads.png";
 import LikePlus from "../Images/LikePlus.png";
 import Checkmark from "../Images/check.png";
+import MusicNote from "../Images/musical-note.png"
 
 const Home = () => {
     const navigate = useNavigate();
@@ -42,6 +43,13 @@ const Home = () => {
     const [currentTime, setCurrentTime] = useState(0);
     const [showAll, setShowAll] = useState(false);
     const [likedSongs, setLikedSongs] = useState([]);
+    const [playlists, setPlaylists] = useState([]);
+    const [showCreateModal, setShowCreateModal] = useState(false);
+    const [newPlaylistName, setNewPlaylistName] = useState("");
+    const [newPlaylistImage, setNewPlaylistImage] = useState(null);
+    const [showPopup, setShowPopup] = useState(false);
+    const [selectedPlaylists, setSelectedPlaylists] = useState([]);
+    const [likedSelected, setLikedSelected] = useState(false);
     const [looping, setLoop] = useState(false);
     const [view, setView] = useState("home");
     const [currentIndex, setCurrentIndex] = useState(0);
@@ -96,6 +104,33 @@ const Home = () => {
                 console.error("Likes error:", err);
                 setLikedSongs([]);
             })
+        fetch(`${API}/api/playlists`, {
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
+        })
+            .then(async res => {
+                const text = await res.text();
+                console.log("PLAYLIST RAW RESPONSE:", text);
+                if (!res.ok) {
+                    console.error("Playlist fetch failed:", res.status, text);
+                    return [];
+                }
+                try {
+                    return JSON.parse(text);
+                } catch {
+                    console.error("Invalid JSON:", text);
+                    return [];
+                }
+            })
+            .then(data => {
+                console.log("PLAYLIST PARSED:", data);
+                setPlaylists(Array.isArray(data) ? data : data.playlists || []);
+            })
+            .catch(err => {
+                console.error("Playlist error:", err);
+                setPlaylists([]);
+            });
     },
         []);
     useEffect(() => {
@@ -222,7 +257,7 @@ const Home = () => {
                         <img src={libraryIcons} className="library-img" alt="Libray" />
                         <img src={libraryOpen} className="libraryOpen-icon" alt="libraryOpen-icon" />
                     </div>
-                    <div className="Plus-div">
+                    <div className="Plus-div" onClick={() => setShowCreateModal(true)}>
                         <img src={add} className="homeadd-icon" alt="Add" />
                     </div>
                     <div className="like-div">
@@ -248,16 +283,23 @@ const Home = () => {
                             </nav>
                             <section className="home_section">
                                 <div className="playlist-row-1">
-                                    <div className="playlistcard1" onClick={() => setView("liked")}><div className="playlistcard1-img"><img src={Heart} className="Play-like-icon" alt="like icon" /></div><div className="playlist-name">Liked Songs</div></div>
-                                    <div className="playlistcard2"><div className="playlistcard2-img"></div><div className="playlist-name">Playlist 1</div></div>
-                                    <div className="playlistcard3"><div className="playlistcard3-img"></div><div className="playlist-name">Playlist 2</div></div>
-                                    <div className="playlistcard4"><div className="playlistcard4-img"></div><div className="playlist-name">Playlist 3</div></div>
-                                </div>
-                                <div className="playlist-row-2">
-                                    <div className="playlistcard5"><div className="playlistcard5-img"></div><div className="playlist-name">Playlist 4</div></div>
-                                    <div className="playlistcard6"><div className="playlistcard6-img"></div><div className="playlist-name">Playlist 5</div></div>
-                                    <div className="playlistcard7"><div className="playlistcard7-img"></div><div className="playlist-name">Playlist 6</div></div>
-                                    <div className="playlistcard8"><div className="playlistcard8-img"></div><div className="playlist-name">Playlist 7</div></div>
+                                    <div className="playlist-card" onClick={() => setView("liked")}>
+                                        <div className="playlist-card-img like">
+                                            <img src={Heart} className="Play-like-icon" />
+                                        </div>
+                                        <div className="playlist-name">Liked Songs</div>
+                                    </div>
+                                    {playlists.map((p) => (
+                                        <div key={p._id} className="playlist-card"
+                                            onClick={() => navigate(`/playlist/${p._id}`)}>
+                                            <div className="playlist-card-img">
+                                                {p.image ? (
+                                                    <img src={p.image?.startsWith("http") ? p.image : `${API}/${p.image}`} />
+                                                ) : (<img src={MusicNote} />)}
+                                            </div>
+                                            <div className="playlist-name">{p.name}</div>
+                                        </div>
+                                    ))}
                                 </div>
                             </section>
                             <section className="home_section1">
@@ -329,7 +371,6 @@ const Home = () => {
                             </section>
                         </>
                     )}
-
                     {view === "liked" && (
                         <div className="home_section">
                             <button onClick={() => setView("home")}>Back</button>
@@ -356,7 +397,6 @@ const Home = () => {
                         </div>
                     )}
                     {view === "profile" && (
-
                         <div className="home_section">
                             <button onClick={() => setView("home")}>Back</button>
                             <div className="profile-container">
@@ -435,9 +475,25 @@ const Home = () => {
                             <div className="Like_button">
                                 <img
                                     src={Array.isArray(likedSongs) &&
-                                        likedSongs.some(t => t._id === currentSong?._id) ? Checkmark : LikePlus}
+                                        likedSongs.some(t => t._id === currentSong?._id)
+                                        ? Checkmark
+                                        : LikePlus}
                                     className="LikePlus"
-                                    onClick={() => toggleLike(currentSong._id)}
+                                    onClick={() => {
+                                        const isLiked =
+                                            Array.isArray(likedSongs) &&
+                                            likedSongs.some(t => t._id === currentSong?._id);
+                                        if (!isLiked) {
+                                            toggleLike(currentSong._id);
+                                        } else {
+                                            setLikedSelected(true);
+                                            const selected = playlists
+                                                .filter(p => p.tracks?.some(t => t._id === currentSong._id))
+                                                .map(p => p._id);
+                                            setSelectedPlaylists(selected);
+                                            setShowPopup(true);
+                                        }
+                                    }}
                                 />
                             </div>
                         </div>
@@ -472,6 +528,171 @@ const Home = () => {
                     </div>
                 )}
             </footer>
+            {showCreateModal && (
+                <div className="create-modal-overlay">
+                    <div className="create-modal">
+                        <h2>Edit details</h2>
+                        <div className="create-content">
+                            <div className="image-upload">
+                                {newPlaylistImage ? (
+                                    <img src={URL.createObjectURL(newPlaylistImage)} />
+                                ) : (
+                                    <div className="image-placeholder">
+                                        <img src={MusicNote} />
+                                    </div>
+                                )}
+                                <input
+                                    type="file"
+                                    onChange={(e) => setNewPlaylistImage(e.target.files[0])}
+                                />
+                            </div>
+                            <div className="form">
+                                <input
+                                    type="text"
+                                    placeholder="My Playlist #1"
+                                    value={newPlaylistName}
+                                    onChange={(e) => setNewPlaylistName(e.target.value)}
+                                />
+                                <textarea placeholder="Add description" />
+                            </div>
+                        </div>
+                        <div className="modal-actions">
+                            <button onClick={() => setShowCreateModal(false)}>Cancel</button>
+                            <button
+                                onClick={async () => {
+                                    const formData = new FormData();
+                                    formData.append("name", newPlaylistName);
+                                    formData.append("image", newPlaylistImage);
+                                    await fetch(`${API}/api/playlists`, {
+                                        method: "POST",
+                                        headers: {
+                                            Authorization: `Bearer ${localStorage.getItem("token")}`
+                                        },
+                                        body: formData
+                                    });
+                                    const updated = await fetch(`${API}/api/playlists`, {
+                                        headers: {
+                                            Authorization: `Bearer ${localStorage.getItem("token")}`
+                                        }
+                                    }).then(res => res.json());
+                                    setPlaylists(updated);
+                                    setShowCreateModal(false);
+                                    setNewPlaylistName("");
+                                    setNewPlaylistImage(null);
+                                }}
+                            >
+                                Save
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+            {showPopup && (
+                <div className="playlist-popup">
+                    <h3>Add to playlist</h3>
+                    <div
+                        className="playlist-row create-new"
+                        onClick={() => {
+                            setShowCreateModal(true);
+                            setShowPopup(false);
+                        }}
+                    >
+                        <div className="playlist-left">
+                            <div className="playlist-icon plus">+</div>
+                            <span>New playlist</span>
+                        </div>
+                    </div>
+                    <div className="playlist-list">
+                        <div
+                            className={`playlist-row ${likedSelected ? "selected" : ""}`}
+                            onClick={() => setLikedSelected(prev => !prev)}
+                        >
+                            <div className="playlist-left">
+                                <div className="playlist-icon heart">
+                                    <img src={Heart} className="popup-heart" />
+                                </div>
+                                <span className="playlist-name">Liked Songs</span>
+                            </div>
+                            <div className="playlist-right">
+                                <div className={`radio ${likedSelected ? "checked" : ""}`}></div>
+                            </div>
+                        </div>
+                        {playlists.map(p => {
+                            const isSelected = selectedPlaylists.includes(p._id);
+                            return (
+                                <div
+                                    key={p._id}
+                                    className={`playlist-row ${isSelected ? "selected" : ""}`}
+                                    onClick={() => {
+                                        setSelectedPlaylists(prev =>
+                                            isSelected
+                                                ? prev.filter(id => id !== p._id)
+                                                : [...prev, p._id]
+                                        );
+                                    }}
+                                >
+                                    <div className="playlist-left">
+                                        <div className="playlist-icon">🎵</div>
+                                        <span className="playlist-name">{p.name}</span>
+                                    </div>
+                                    <div className="playlist-right">
+                                        <div className={`radio ${isSelected ? "checked" : ""}`}></div>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                    <div className="popup-actions">
+                        <button onClick={() => setShowPopup(false)}>Cancel</button>
+                        <button
+                            onClick={async () => {
+                                const token = localStorage.getItem("token");
+                                const isAlreadyLiked = likedSongs.some(t => t._id === currentSong._id);
+                                if (likedSelected && !isAlreadyLiked) {
+                                    await toggleLike(currentSong._id);
+                                }
+                                if (!likedSelected && isAlreadyLiked) {
+                                    await toggleLike(currentSong._id);
+                                }
+                                for (let p of playlists) {
+                                    const isSelected = selectedPlaylists.includes(p._id);
+                                    const alreadyInPlaylist = p.tracks?.some(t => t._id === currentSong._id);
+                                    if (isSelected && !alreadyInPlaylist) {
+                                        await fetch(`${API}/api/playlists/${p._id}/add`, {
+                                            method: "POST",
+                                            headers: {
+                                                "Content-Type": "application/json",
+                                                Authorization: `Bearer ${token}`
+                                            },
+                                            body: JSON.stringify({ trackId: currentSong._id })
+                                        });
+                                    }
+                                    if (!isSelected && alreadyInPlaylist) {
+                                        await fetch(`${API}/api/playlists/${p._id}/remove`, {
+                                            method: "DELETE",
+                                            headers: {
+                                                "Content-Type": "application/json",
+                                                Authorization: `Bearer ${token}`
+                                            },
+                                            body: JSON.stringify({ trackId: currentSong._id })
+                                        });
+                                    }
+                                }
+                                const updatedLikes = await fetch(`${API}/api/likes`, {
+                                    headers: { Authorization: `Bearer ${token}` }
+                                }).then(res => res.json());
+                                setLikedSongs(updatedLikes);
+                                const updatedPlaylists = await fetch(`${API}/api/playlists`, {
+                                    headers: { Authorization: `Bearer ${token}` }
+                                }).then(res => res.json());
+                                setPlaylists(updatedPlaylists);
+                                setShowPopup(false);
+                                setSelectedPlaylists([]);
+                                setLikedSelected(false);
+                            }}>Done</button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

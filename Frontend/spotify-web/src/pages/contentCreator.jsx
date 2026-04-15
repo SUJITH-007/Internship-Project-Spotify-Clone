@@ -154,11 +154,10 @@ const ContentCreator = () => {
         }
     };
     const handleBulkFileChange = (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            setBulkFile(file);
-        }
-    };
+    const file = e.target.files[0];
+    console.log("FILE SELECTED:", file);
+    setBulkFile(file);
+};
     React.useEffect(() => {
         const fetchTracks = async () => {
             try {
@@ -244,32 +243,35 @@ const ContentCreator = () => {
     };
 
     const handleBulkUpload = async () => {
-        if (!bulkFile) {
-            alert("Please select a file");
-            return;
-        }
-        try {
-            const formData = new FormData();
-            formData.append("file", bulkFile);
-            const token = localStorage.getItem("token");
-            const res = await fetch(`${API}/api/tracks/bulk`, {
-                method: "POST",
-                headers: {
-                    Authorization: `Bearer ${token}`
-                },
-                body: formData
-            });
-            const data = await res.json();
-            if (res.ok) {
-                alert("Bulk upload successful!");
-            } else {
-                alert(data.message || "Bulk upload failed");
-            }
-        } catch (err) {
-            console.error(err);
-            alert("Something went wrong");
-        }
-    };
+    console.log("BUTTON CLICKED");
+
+    if (!bulkFile) {
+        console.log("NO FILE SELECTED");
+        alert("Please select a file");
+        return;
+    }
+
+    console.log("FILE:", bulkFile);
+
+    try {
+        const formData = new FormData();
+        formData.append("file", bulkFile);
+        const token = localStorage.getItem("token");
+        console.log("SENDING REQUEST...");
+        const res = await fetch(`${API}/api/tracks/bulk`, {
+            method: "POST",
+            headers: {
+                Authorization: `Bearer ${token}`
+            },
+            body: formData
+        });
+        console.log("RESPONSE STATUS:", res.status);
+        const data = await res.json();
+        console.log("RESPONSE DATA:", data);
+    } catch (err) {
+        console.error("ERROR:", err);
+    }
+};
 
     const handleDelete = async (id) => {
         try {
@@ -450,7 +452,7 @@ const ContentCreator = () => {
                             <label className="file-upload">
                                 <input
                                     type="file"
-                                    accept=".csv,.xlsx"
+                                    accept=".csv"
                                     onChange={handleBulkFileChange}
                                 />
                                 <span>Select CSV File</span>

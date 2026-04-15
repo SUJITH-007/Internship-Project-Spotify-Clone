@@ -8,6 +8,9 @@ const storage = multer.diskStorage({
         } else if (file.mimetype.startsWith("audio")) {
             cb(null, "uploads/audio");
         }
+        else{
+            cb(null, "uploads_bulk");
+        }
     },
     filename: function (req, file, cb) {
         const uniqueName = Date.now() + "-" + file.originalname;
