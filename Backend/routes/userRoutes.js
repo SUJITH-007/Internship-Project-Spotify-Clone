@@ -1,14 +1,13 @@
 const express = require("express");
 const router = express.Router();
 const protect = require("../middleware/authMiddleware");
-const upload = require("../middleware/uploadMiddleware");
+const { upload } = require("../middleware/uploadMiddleware");
 const User = require("../models/User");
 const bcrypt = require("bcryptjs");
+const PlaySession = require("../models/PlaySession");
+const Track = require("../models/Track");
 
-router.put(
-    "/update",
-    protect,
-    // upload.single("profileImage"),  for profile updation i need to un-comment it later
+router.put("/update",protect,upload.single("profileImage"),
     async (req, res) => {
         try {
             const user = await User.findById(req.user);
@@ -34,5 +33,49 @@ router.put(
         }
     }
 );
+
+router.get("/dashboard", protect, async (req, res) => {
+    try {
+        const userId = req.user;
+        const sessions = await PlaySession.find({
+            user: userId,
+            counted: true
+        }).populate("track");
+        const trackCount = {};
+        const artistCount = {};
+        sessions.forEach(session => {
+            const track = session.track;
+            if (!track) return;
+            const trackId = track._id.toString();
+            trackCount[trackId] = trackCount[trackId]
+                ? trackCount[trackId] + 1
+                : 1;
+            track.artists.forEach(artist => {
+                artistCount[artist] = artistCount[artist]
+                    ? artistCount[artist] + 1
+                    : 1;
+            });
+        });
+        const topTracks = Object.entries(trackCount)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 5)
+            .map(([trackId, count]) => {
+                const track = sessions.find(
+                    s => s.track._id.toString() === trackId
+                ).track;
+                return { ...track._doc, plays: count };
+            });
+        const topArtists = Object.entries(artistCount)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 5)
+            .map(([artist, count]) => ({
+                name: artist,
+                plays: count
+            }));
+        res.json({ topTracks, topArtists });
+    } catch (err) {
+        res.status(500).json({ message: "Dashboard error" });
+    }
+});
 
 module.exports = router;

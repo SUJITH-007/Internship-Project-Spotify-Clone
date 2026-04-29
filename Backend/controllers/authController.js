@@ -4,15 +4,7 @@ const jwt = require("jsonwebtoken");
 exports.registerUser = async (req, res) => {
     try {
         const {
-            email,
-            password,
-            username,
-            year,
-            month,
-            day,
-            gender,
-            marketingOptOut,
-            shareDataWithProviders
+            email,password,username,year,month,day,gender,marketingOptOut,shareDataWithProviders
         } = req.body;
         if (!email || !password || !username) {
             return res.status(400).json({ message: "Required fields missing" });
@@ -24,18 +16,11 @@ exports.registerUser = async (req, res) => {
         }
         const hashedPassword = await bcrypt.hash(password, 10);
         const user = await User.create({
-            email,
-            username,
-            password: hashedPassword,
+            email,username,password: hashedPassword,
             dateOfBirth: {
-                year,
-                month,
-                day,
+                year, month,day,
             },
-            gender,
-            role,
-            marketingOptOut,
-            shareDataWithProviders,
+            gender, role, marketingOptOut,shareDataWithProviders,
         });
         const token = jwt.sign(
             { id: user._id, role: user.role },

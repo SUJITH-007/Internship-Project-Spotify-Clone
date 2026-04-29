@@ -188,4 +188,21 @@ router.put("/:id", protect, upload.single("thumbnail"), async (req, res) => {
     }
 });
 
+router.get("/search/:query", protect, async (req, res) => {
+    try {
+        const q = req.params.query;
+        const tracks = await Track.find({
+            $or: [
+                { title: { $regex: q, $options: "i" } },
+                { artists: { $elemMatch: { $regex: q, $options: "i" } } },
+                { album: { $regex: q, $options: "i" } }
+            ]
+        }).limit(10);
+        res.json(tracks);
+    } catch (err) {
+        res.status(500).json({ message: "Search failed" });
+    }
+});
+
+
 module.exports = router;

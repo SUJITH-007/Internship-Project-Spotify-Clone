@@ -9,6 +9,11 @@ const trackSchema = new mongoose.Schema(
         artists: [String],
         genres: [String],
         album: String,
+        albumId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Album",
+            default: null
+        },
         thumbnail: String,
         audioFile: String,
         isPremium: {
@@ -18,6 +23,10 @@ const trackSchema = new mongoose.Schema(
         published: {
             type: Boolean,
             default: false,
+        },
+        playCount: {
+            type: Number,
+            default: 0
         },
         uploader: {
             type: mongoose.Schema.Types.ObjectId,

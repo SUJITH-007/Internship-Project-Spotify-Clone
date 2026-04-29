@@ -1,0 +1,6 @@
+title,artists,genres,album,published,isPremium,audioPath,imagePath
+LUZ ROJA,"[""bxkq""]","[""Funk""]",LUZ ROJA,true,false,audio/Bxkq Luz Roja.mp3,images/Luzroja.jpg
+LUZ ROJA - Super Slowed,"[""bxkq""]","[""Funk""]",LUZ ROJA,true,false,audio/Bxkq Luz Roja (Super Slowed).mp3,images/Luzroja.jpg
+LUZ ROJA - Ultra Slowed,"[""bxkq""]","[""Funk""]",LUZ ROJA,true,true,audio/Bxkq Luz Roja (Ultra Slowed).mp3,images/Luzroja.jpg
+LUZ ROJA - Edit Slowed,"[""bxkq""]","[""Funk""]",LUZ ROJA,true,true,audio/Bxkq Luz Roja (Edit Slowed).mp3,images/Luzroja.jpg
+LUZ ROJA - Sped up,"[""bxkq""]","[""Funk""]",LUZ ROJA,true,false,audio/Bxkq Luz Roja (Sped Up).mp3,images/Luzroja.jpg

@@ -1,6 +1,6 @@
 import "../styles/Home.css";
 import { Link, useNavigate } from "react-router-dom";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import spotifyLogo from "../Images/spotify-Logo.png";
 import homeLogo from "../Images/house.png";
 import searchIcon from "../Images/magnifying-glass.png";
@@ -13,6 +13,7 @@ import libraryIcons from "../Images/libraryIcon.png";
 import add from "../Images/plus.png";
 import Heart from "../Images/heart.png";
 import save from "../Images/save.png";
+import Back from "../Images/back.png";
 import libraryOpen from "../Images/libraryOpen.png";
 import SongPlayButton from "../Images/Song-play-button.png";
 import NextButton from "../Images/next.png";
@@ -44,17 +45,91 @@ const Home = () => {
     const [showAll, setShowAll] = useState(false);
     const [likedSongs, setLikedSongs] = useState([]);
     const [playlists, setPlaylists] = useState([]);
+    const [albums, setAlbums] = useState([]);
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [newPlaylistName, setNewPlaylistName] = useState("");
     const [newPlaylistImage, setNewPlaylistImage] = useState(null);
+    const [showEdit, setShowEdit] = useState(false);
     const [showPopup, setShowPopup] = useState(false);
     const [selectedPlaylists, setSelectedPlaylists] = useState([]);
     const [likedSelected, setLikedSelected] = useState(false);
+    const [selectedPlaylist, setSelectedPlaylist] = useState(null);
+    const searchRef = useRef(null);
+    const [selectedAlbum, setSelectedAlbum] = useState(null);
+    const [isSaving, setIsSaving] = useState(false);
     const [looping, setLoop] = useState(false);
     const [view, setView] = useState("home");
     const [currentIndex, setCurrentIndex] = useState(0);
+    const [showShare, setShowShare] = useState(false);
     const [isShuffling, setIsShuffling] = useState(false);
+    const [playContext, setPlayContext] = useState("global");
+    const [sessionId, setSessionId] = useState(null);
+    const [searchQuery, setSearchQuery] = useState("");
+    const [searchResults, setSearchResults] = useState({
+        tracks: [],
+        albums: [],
+        playlists: []
+    });
+    const [showSearch, setShowSearch] = useState(false);
     const API = import.meta.env.VITE_API;
+
+    const [dashboard, setDashboard] = useState({
+        topTracks: [],
+        topArtists: []
+    });
+    const fetchPlaylists = useCallback(async () => {
+        const token = localStorage.getItem("token");
+        const data = await fetch(`${API}/api/playlists`, {
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
+        }).then(res => res.json());
+        const list = Array.isArray(data) ? data : data.playlists || [];
+        setPlaylists(list);
+        if (selectedPlaylist) {
+            const updated = list.find(p => p._id === selectedPlaylist._id);
+            if (updated) setSelectedPlaylist(updated);
+        }
+    }, [API, selectedPlaylist]);
+    const fetchDashboard = useCallback(async () => {
+        const token = localStorage.getItem("token");
+        const data = await fetch(`${API}/api/user/dashboard`, {
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
+        }).then(res => res.json());
+        setDashboard(data);
+    }, [API]);
+    useEffect(() => {
+        if (!sessionId) return;
+        let isActive = true;
+        const timer = setTimeout(async () => {
+            if (!isActive) return;
+            await fetch(`${API}/api/play/complete`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${localStorage.getItem("token")}`
+                },
+                body: JSON.stringify({ sessionId })
+            });
+        }, 30000);
+        return () => {
+            isActive = false;
+            clearTimeout(timer);
+        };
+    }, [sessionId]);
+
+    const fetchAlbums = async () => {
+        try {
+            const res = await fetch(`${API}/api/albums`);
+            const data = await res.json();
+            setAlbums(data);
+        } catch (err) {
+            console.error(err);
+            setAlbums([]);
+        }
+    };
 
     useEffect(() => {
         const token = localStorage.getItem("token");
@@ -103,50 +178,88 @@ const Home = () => {
             .catch(err => {
                 console.error("Likes error:", err);
                 setLikedSongs([]);
-            })
-        fetch(`${API}/api/playlists`, {
-            headers: {
-                Authorization: `Bearer ${token}`
-            }
-        })
-            .then(async res => {
-                const text = await res.text();
-                console.log("PLAYLIST RAW RESPONSE:", text);
-                if (!res.ok) {
-                    console.error("Playlist fetch failed:", res.status, text);
-                    return [];
-                }
-                try {
-                    return JSON.parse(text);
-                } catch {
-                    console.error("Invalid JSON:", text);
-                    return [];
-                }
-            })
-            .then(data => {
-                console.log("PLAYLIST PARSED:", data);
-                setPlaylists(Array.isArray(data) ? data : data.playlists || []);
-            })
-            .catch(err => {
-                console.error("Playlist error:", err);
-                setPlaylists([]);
             });
-    },
-        []);
+        fetchAlbums();
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        fetchPlaylists();
+        fetchDashboard();
+    }, []);
     useEffect(() => {
         if (audioRef.current && currentSong) {
             audioRef.current.load();
             audioRef.current.play();
         }
     }, [currentSong]);
-    const [user, setUser] = useState(
-        JSON.parse(localStorage.getItem("user"))
-    );
-    const playSong = (track) => {
+    const [user, setUser] = useState(() => {
+        try {
+            const stored = localStorage.getItem("user");
+            return stored ? JSON.parse(stored) : null;
+        } catch {
+            return null;
+        }
+    });
+
+    const searchTimeout = useRef(null);
+    const handleSearch = (query) => {
+        setSearchQuery(query);
+        if (searchTimeout.current) {
+            clearTimeout(searchTimeout.current);
+        }
+        if (!query.trim()) {
+            setShowSearch(false);
+            return;
+        }
+        searchTimeout.current = setTimeout(async () => {
+            try {
+                const token = localStorage.getItem("token");
+                const [tracksRes, albumsRes, playlistsRes] = await Promise.all([
+                    fetch(`${API}/api/tracks/search/${query}`, {
+                        headers: { Authorization: `Bearer ${token}` }
+                    }),
+                    fetch(`${API}/api/albums/search/${query}`),
+                    fetch(`${API}/api/playlists/search/${query}`, {
+                        headers: { Authorization: `Bearer ${token}` }
+                    })
+                ]);
+                const tracksData = await tracksRes.json();
+                const albumsData = await albumsRes.json();
+                const playlistsData = await playlistsRes.json();
+                console.log("TRACKS:", tracksData);
+                console.log("ALBUMS:", albumsData);
+                console.log("PLAYLISTS:", playlistsData);
+                setSearchResults({
+                    tracks: Array.isArray(tracksData) ? tracksData : tracksData.tracks || [],
+                    albums: Array.isArray(albumsData) ? albumsData : albumsData.albums || [],
+                    playlists: Array.isArray(playlistsData) ? playlistsData : playlistsData.playlists || []
+                });
+                setShowSearch(true);
+            } catch (err) {
+                console.error("Search error", err);
+            }
+        }, 400);
+    };
+
+    useEffect(() => {
+        const handleClickOutside = (e) => {
+            if (searchRef.current && !searchRef.current.contains(e.target)) {
+                setShowSearch(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
+    const playSong = async (track) => {
         const index = tracks.findIndex(t => t._id === track._id);
+        setPlayContext("global");
         setCurrentIndex(index);
         setCurrentSong(track);
         setIsPlaying(true);
+        try {
+            await startSession(track._id);
+        } catch (err) {
+            console.error(err + "Play count failed");
+        }
     };
     const togglePlay = () => { if (!audioRef.current) return; if (isPlaying) { audioRef.current.pause(); } else { audioRef.current.play(); } setIsPlaying(!isPlaying); }
     const updateProgress = () => { const audio = audioRef.current; if (!audio) return; setCurrentTime(audio.currentTime); setDuration(audio.duration); setProgress((audio.currentTime / audio.duration) * 100); }
@@ -172,23 +285,50 @@ const Home = () => {
         }
     };
     const playNext = () => {
-        if (!tracks.length) return;
+        const list = playContext === "playlist"
+            ? selectedPlaylist?.tracks || []
+            : playContext === "liked"
+                ? likedSongs
+                : playContext === "album"
+                    ? selectedAlbum?.tracks || []
+                    : tracks;
+        if (!list.length) return;
         let nextIndex;
         if (isShuffling) {
-            nextIndex = Math.floor(Math.random() * tracks.length);
+            if (list.length === 1) {
+                nextIndex = 0;
+            } else {
+                do {
+                    // eslint-disable-next-line react-hooks/purity
+                    nextIndex = Math.floor(Math.random() * list.length);
+                } while (nextIndex === currentIndex);
+            }
         } else {
-            nextIndex = (currentIndex + 1) % tracks.length;
+            nextIndex = (currentIndex + 1) % list.length;
         }
+        const nextTrack = list[nextIndex];
         setCurrentIndex(nextIndex);
-        setCurrentSong(tracks[nextIndex]);
+        setCurrentSong(nextTrack);
+        startSession(nextTrack._id);
         setIsPlaying(true);
     };
+
+
     const playPrevious = () => {
-        if (!tracks.length) return;
+        const list = playContext === "playlist"
+            ? selectedPlaylist?.tracks || []
+            : playContext === "liked"
+                ? likedSongs
+                : playContext === "album"
+                    ? selectedAlbum?.tracks || []
+                    : tracks;
+        if (!list.length) return;
         let prevIndex = currentIndex - 1;
-        if (prevIndex < 0) prevIndex = tracks.length - 1;
+        if (prevIndex < 0) prevIndex = list.length - 1;
+        const prevTrack = list[prevIndex];
         setCurrentIndex(prevIndex);
-        setCurrentSong(tracks[prevIndex]);
+        setCurrentSong(prevTrack);
+        startSession(prevTrack._id);
         setIsPlaying(true);
     };
     const toggleShuffle = () => {
@@ -198,25 +338,51 @@ const Home = () => {
     const [newPassword, setNewPassword] = useState("");
     const [newImage, setNewImage] = useState(null);
     const updateProfile = async () => {
-        const token = localStorage.getItem("token");
-        const formData = new FormData();
-        formData.append("username", newName);
-        formData.append("password", newPassword);
-        if (newImage) {
-            formData.append("profileImage", newImage);
+        setIsSaving(true);
+        try {
+            const token = localStorage.getItem("token");
+            const formData = new FormData();
+            if (newName) formData.append("username", newName);
+            if (newPassword) formData.append("password", newPassword);
+            if (newImage) formData.append("profileImage", newImage);
+            const res = await fetch(`${API}/api/user/update`, {
+                method: "PUT",
+                headers: {
+                    Authorization: `Bearer ${token}`
+                },
+                body: formData
+            });
+            if (!res.ok) {
+                console.error("Update failed");
+                return;
+            }
+            const data = await res.json();
+            if (!data.user) {
+                console.error("Invalid user response");
+                return;
+            }
+            localStorage.setItem("user", JSON.stringify(data.user));
+            setUser(data.user);
+            setShowEdit(false);
+        } catch (err) {
+            console.error("Update error:", err);
+            setIsSaving(false);
         }
-        const res = await fetch(`${API}/api/user/update`, {
-            method: "PUT",
+    };
+    const startSession = async (trackId) => {
+        const res = await fetch(`${API}/api/play/start`, {
+            method: "POST",
             headers: {
-                Authorization: `Bearer ${token}`
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${localStorage.getItem("token")}`
             },
-            body: formData
+            body: JSON.stringify({ trackId })
         });
         const data = await res.json();
-        localStorage.setItem("user", JSON.stringify(data.user));
-        setUser(data.user);
-        alert("Profile Updated");
+        setSessionId(data.sessionId);
     };
+
+
     return (
         <div className="home-page">
             <nav className="top_navbar">
@@ -227,11 +393,53 @@ const Home = () => {
                     <div className="home_icon" onClick={() => navigate("/home")}>
                         <img src={homeLogo} alt="Home" />
                     </div>
-                    <div className="search_bar">
+                    <div className="search_bar" ref={searchRef}>
                         <img src={searchIcon} alt="Search" className="search_icon" />
-                        <input type="text" placeholder="What do you want to play?" />
+                        <input
+                            type="text"
+                            placeholder="What do you want to play?"
+                            value={searchQuery}
+                            onChange={(e) => handleSearch(e.target.value)}
+                            onFocus={() => searchQuery && setShowSearch(true)}
+                        />
                         <div className="search-divider"></div>
                         <img src={libraryIcon} alt="Library" className="library-icon" />
+                        {showSearch && (
+                            <div className="search_results">
+                                {searchResults.tracks.map(t => (
+                                    <div key={t._id} className="search_item" onClick={() => playSong(t)}>
+                                        <img src={`${API}/${t.thumbnail}`} />
+                                        <span>{t.title}</span>
+                                    </div>
+                                ))}
+                                {searchResults.albums.map(a => (
+                                    <div key={a._id} className="search_item" onClick={async () => {
+                                        const res = await fetch(`${API}/api/albums`);
+                                        const data = await res.json();
+                                        const full = data.find(x => x._id === a._id);
+                                        setSelectedAlbum(full);
+                                        setView("album");
+                                        setShowSearch(false);
+                                    }}>
+                                        <span>Album: {a.name}</span>
+                                    </div>
+                                ))}
+                                {searchResults.playlists.map(p => (
+                                    <div key={p._id} className="search_item" onClick={async () => {
+                                        const res = await fetch(`${API}/api/playlists`, {
+                                            headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+                                        });
+                                        const data = await res.json();
+                                        const full = data.find(x => x._id === p._id);
+                                        setSelectedPlaylist(full);
+                                        setView("playlist");
+                                        setShowSearch(false);
+                                    }}>
+                                        <span>Playlist: {p.name}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 </div>
                 <div className="nav_right">
@@ -284,17 +492,26 @@ const Home = () => {
                             <section className="home_section">
                                 <div className="playlist-row-1">
                                     <div className="playlist-card" onClick={() => setView("liked")}>
-                                        <div className="playlist-card-img like">
+                                        <div className="playlist-card-img home-like">
                                             <img src={Heart} className="Play-like-icon" />
                                         </div>
                                         <div className="playlist-name">Liked Songs</div>
                                     </div>
-                                    {playlists.map((p) => (
+                                    {playlists.slice(0, 7).map((p) => (
                                         <div key={p._id} className="playlist-card"
-                                            onClick={() => navigate(`/playlist/${p._id}`)}>
-                                            <div className="playlist-card-img">
+                                            onClick={async () => {
+                                                const res = await fetch(`${API}/api/playlists`, {
+                                                    headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+                                                });
+                                                const data = await res.json();
+                                                const full = data.find(x => x._id === p._id);
+                                                setSelectedPlaylist(full);
+                                                setView("playlist");
+                                                setShowSearch(false);
+                                            }}>
+                                            <div className="playlist-card-img home-playlist">
                                                 {p.image ? (
-                                                    <img src={p.image?.startsWith("http") ? p.image : `${API}/${p.image}`} />
+                                                    <img src={p.image?.startsWith("http") ? p.image : `${API}${p.image}`} />
                                                 ) : (<img src={MusicNote} />)}
                                             </div>
                                             <div className="playlist-name">{p.name}</div>
@@ -319,17 +536,33 @@ const Home = () => {
                                     ))}
                                 </div>
                             </section>
-                            <section className="home_section">
+                            {/* <section className="home_section">
                                 <h2>Recently played</h2>
                                 <div className="section_box"></div>
                             </section>
                             <section className="home_section">
                                 <h2>Made For You</h2>
                                 <div className="section_box"></div>
-                            </section>
+                            </section> */}
                             <section className="home_section">
                                 <h2>Albums</h2>
-                                <div className="section_box"></div>
+                                <div className="section_box">
+                                    {albums.map(a => (
+                                        <div key={a._id} className="album_card"
+                                            onClick={async () => {
+                                                await fetchAlbums();
+                                                const updated = albums.find(x => x._id === a._id);
+                                                setSelectedAlbum(updated);
+                                                setView("album");
+                                            }}>
+                                            <img
+                                                src={a.coverImage ? `${API}/uploads/${a.coverImage}` : MusicNote}
+                                                className="album_cover"
+                                            />
+                                            <p className="track_title">{a.name}</p>
+                                        </div>
+                                    ))}
+                                </div>
                             </section>
                             <section className="home_section">
                                 <div className="main_footer">
@@ -373,18 +606,101 @@ const Home = () => {
                     )}
                     {view === "liked" && (
                         <div className="home_section">
-                            <button onClick={() => setView("home")}>Back</button>
+                            <div className="likelist-top">
+                                <button className="backbtn" onClick={() => setView("home")}>
+                                    <img src={Back} alt="back" />
+                                </button>
+                            </div>
                             <div className="liked-list">
                                 <div className="Liked-section-header">
                                     <div className="Like-logo"><img src={Heart} className="liked-icon" alt="like icon" /></div>
                                     <div className="like-details">
                                         <p className="playlist-like">Playlist</p>
                                         <h1 className="Like-heading">Liked Songs</h1>
-                                        <p className="username">Username</p>
+                                        <p className="username">{user?.username}</p>
                                     </div>
                                 </div>
+                                <div className="playlist-controls">
+                                    <button className="play-btn" onClick={() => {
+                                        if (!likedSongs.length) return;
+                                        setPlayContext("liked");
+                                        setCurrentIndex(0);
+                                        setCurrentSong(likedSongs[0]);
+                                        setIsPlaying(true);
+                                    }}>
+                                        <img src={isPlaying ? PauseButton : SongPlayButton} />
+                                    </button>
+                                    <button className={`icon-btn ${isShuffling ? "active" : ""}`} onClick={toggleShuffle}>
+                                        <img src={ShuffleButton} />
+                                    </button>
+                                    <button className="icon-btn">
+                                        <img src={DownloadLogo} />
+                                    </button>
+                                    <button className="icon-btn" onClick={() => setShowShare(true)}>
+                                        <img src={Community} />
+                                    </button>
+                                </div>
                                 {likedSongs.map((track, index) => (
-                                    <div key={track._id} className="liked-row" onClick={() => playSong(track)}>
+                                    <div key={track._id} className="liked-row" onClick={() => {
+                                        setPlayContext("liked");
+                                        setCurrentIndex(index);
+                                        setCurrentSong(track);
+                                        setIsPlaying(true);
+                                    }}>
+                                        <span className="liked-index">{index + 1}</span>
+                                        <img src={`${API}/${track.thumbnail}`} className="liked-img" />
+                                        <div className="liked-info">
+                                            <p className="liked-title">{track.title}</p>
+                                            <p className="liked-artist">{track.artists?.join(", ")}</p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                    {view === "playlist" && selectedPlaylist && (
+                        <div className="home_section">
+                            <div className="playlist-top">
+                                <button className="backbtn" onClick={() => setView("home")}><img src={Back} /></button>
+                            </div>
+                            <div className="playlist-list">
+                                <div className="playlist-header">
+                                    <div className="playlist-image">
+                                        <img src={selectedPlaylist.image ? (selectedPlaylist.image.startsWith("http") ? selectedPlaylist.image : `${API}${selectedPlaylist.image}`) : MusicNote} />
+                                    </div>
+                                    <div className="playlist-info">
+                                        <p className="playlist-type">Playlist</p>
+                                        <h1 className="playlist-title">{selectedPlaylist.name}</h1>
+                                        <p className="playlist-meta">{user?.username}</p>
+                                    </div>
+                                </div>
+                                <div className="playlist-controls">
+                                    <button className="play-btn" onClick={() => {
+                                        if (!selectedPlaylist.tracks?.length) return;
+                                        setPlayContext("playlist");
+                                        setCurrentIndex(0);
+                                        setCurrentSong(selectedPlaylist.tracks[0]);
+                                        setIsPlaying(true);
+                                    }}>
+                                        <img src={isPlaying ? PauseButton : SongPlayButton} />
+                                    </button>
+                                    <button className={`icon-btn ${isShuffling ? "active" : ""}`} onClick={toggleShuffle}>
+                                        <img src={ShuffleButton} />
+                                    </button>
+                                    <button className="icon-btn">
+                                        <img src={DownloadLogo} />
+                                    </button>
+                                    <button className="icon-btn" onClick={() => setShowShare(true)}>
+                                        <img src={Community} />
+                                    </button>
+                                </div>
+                                {selectedPlaylist.tracks?.map((track, index) => (
+                                    <div key={track._id} className="liked-row" onClick={() => {
+                                        setPlayContext("playlist");
+                                        setCurrentIndex(index);
+                                        setCurrentSong(track);
+                                        setIsPlaying(true);
+                                    }}>
                                         <span className="liked-index">{index + 1}</span>
                                         <img src={`${API}/${track.thumbnail}`} className="liked-img" />
                                         <div className="liked-info">
@@ -397,40 +713,141 @@ const Home = () => {
                         </div>
                     )}
                     {view === "profile" && (
-                        <div className="home_section">
-                            <button onClick={() => setView("home")}>Back</button>
-                            <div className="profile-container">
-                                <div className="profile-header">
+                        <div className="profile-page">
+                            <button className="backbtn" onClick={() => setView("home")}>
+                                <img src={Back} alt="back" />
+                            </button>
+                            <div className="profile-header-section">
+                                <div className="profile-image-wrapper">
                                     <img
-                                        src={user?.profileImage ? `${API}/${user.profileImage}` : Profile}
-                                        className="profile-avatar"
+                                        src={user?.profileImage?.startsWith("http")
+                                            ? user.profileImage
+                                            : `${API}/${user?.profileImage}`}
+                                        className="profile-image-large"
                                     />
+                                </div>
+                                <div className="profile-text">
+                                    <p className="profile-label">Profile</p>
+                                    <h1 className="profile-username">{user?.username}</h1>
+                                    <p className="profile-meta">
+                                        {user?.email} <br /> Plan: {user?.subscription?.plan}
+                                    </p>
+                                    <button className="edit-btn" onClick={() => setShowEdit(true)}>
+                                        Edit Profile
+                                    </button>
+                                </div>
+                            </div>
+                            {showEdit && (
+                                <div className="profile-edit-box">
                                     <input type="file" onChange={(e) => setNewImage(e.target.files[0])} />
-                                    <div className="profile-info">
-                                        <h1 className="profile-name">
-                                            {user?.username || "User"}
-                                        </h1>
-                                        <p className="profile-email">
-                                            {user?.email}
-                                        </p>
-                                        <p className="profile-plan">
-                                            Plan: {user?.subscription?.plan || "free"}
-                                        </p>
+                                    <input
+                                        type="text"
+                                        placeholder="New Name"
+                                        onChange={(e) => setNewName(e.target.value)}
+                                    />
+                                    <input
+                                        type="password"
+                                        placeholder="New Password"
+                                        onChange={(e) => setNewPassword(e.target.value)}
+                                    />
+                                    <button onClick={updateProfile} disabled={isSaving}>{isSaving ? "Saving..." : "Save Changes"} </button>
+                                    <button onClick={() => setShowEdit(false)}>Cancel</button>
+                                </div>
+                            )}
+                            <div className="user-dashboard">
+                                <h2>Top tracks this month</h2>
+                                <div className={`dashboard-list ${user?.subscription?.plan === "free" ? "blurred" : ""}`}>
+                                    {dashboard.topTracks.map((track, index) => (
+                                        <div key={track._id} className="dashboard-row">
+                                            <div className="col_index">{index + 1}</div>
+                                            <div className="col_image">
+                                                <img src={`${API}/${track.thumbnail}`} />
+                                            </div>
+                                            <div className="col_info">
+                                                <div className="t_title">{track.title}</div>
+                                                <div className="t_artist">{track.artists.join(", ")}</div>
+                                            </div>
+                                            <div className="col_album">
+                                                {track.album || "Unknown Album"}
+                                            </div>
+                                            <div className="col_plays">
+                                                {track.plays}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                                {user?.subscription?.plan === "free" && (
+                                    <p className="premium-msg">Upgrade to Premium to see your stats</p>
+                                )}
+                                <h2>Top artists</h2>
+                                <div className={`dashboard-list ${user?.subscription?.plan === "free" ? "blurred" : ""}`}>
+                                    {dashboard.topArtists.map((artist, index) => (
+                                        <div key={index} className="dashboard-row">
+                                            <span>{index + 1}</span>
+                                            <p>{artist.name}</p>
+                                            <span>{artist.plays} plays</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                    {view === "album" && selectedAlbum && (
+                        <div className="album-view">
+                            <div className="playlist-top">
+                                <button className="backbtn" onClick={() => setView("home")}>
+                                    <img src={Back} />
+                                </button>
+                            </div>
+                            <div className="playlist-list">
+                                <div className="playlist-header">
+                                    <div className="playlist-image">
+                                        <img
+                                            src={selectedAlbum.coverImage
+                                                ? `${API}/uploads/${selectedAlbum.coverImage}`
+                                                : MusicNote}
+                                        />
                                     </div>
-                                    <div className="profile-edit">
-                                        <input
-                                            type="text"
-                                            placeholder="New Name"
-                                            onChange={(e) => setNewName(e.target.value)}
-                                        />
-                                        <input
-                                            type="password"
-                                            placeholder="New Password"
-                                            onChange={(e) => setNewPassword(e.target.value)}
-                                        />
-                                        <button onClick={updateProfile}>Save Changes</button>
+                                    <div className="playlist-info">
+                                        <p className="playlist-type">Album</p>
+                                        <h1 className="playlist-title">{selectedAlbum.name}</h1>
                                     </div>
                                 </div>
+                                <div className="playlist-controls">
+                                    <button className="play-btn" onClick={() => {
+                                        if (!selectedAlbum.tracks?.length) return;
+                                        setPlayContext("album");
+                                        setCurrentIndex(0);
+                                        setCurrentSong(selectedAlbum.tracks[0]);
+                                        setIsPlaying(true);
+                                    }}>
+                                        <img src={isPlaying ? PauseButton : SongPlayButton} />
+                                    </button>
+                                    <button className={`icon-btn ${isShuffling ? "active" : ""}`} onClick={toggleShuffle}>
+                                        <img src={ShuffleButton} />
+                                    </button>
+                                    <button className="icon-btn">
+                                        <img src={DownloadLogo} />
+                                    </button>
+                                    <button className="icon-btn" onClick={() => setShowShare(true)}>
+                                        <img src={Community} />
+                                    </button>
+                                </div>
+                                {selectedAlbum.tracks?.map((track, index) => (
+                                    <div key={track._id} className="liked-row" onClick={() => {
+                                        setPlayContext("album");
+                                        setCurrentIndex(index);
+                                        setCurrentSong(track);
+                                        setIsPlaying(true);
+                                    }}>
+                                        <span className="liked-index">{index + 1}</span>
+                                        <img src={`${API}/${track.thumbnail}`} className="liked-img" />
+                                        <div className="liked-info">
+                                            <p className="liked-title">{track.title}</p>
+                                            <p className="liked-artist">{track.artists?.join(", ")}</p>
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
                         </div>
                     )}
@@ -562,27 +979,22 @@ const Home = () => {
                                 onClick={async () => {
                                     const formData = new FormData();
                                     formData.append("name", newPlaylistName);
-                                    formData.append("image", newPlaylistImage);
-                                    await fetch(`${API}/api/playlists`, {
+                                    if (newPlaylistImage) {
+                                        formData.append("image", newPlaylistImage);
+                                    }
+                                    const res = await fetch(`${API}/api/playlists`, {
                                         method: "POST",
                                         headers: {
                                             Authorization: `Bearer ${localStorage.getItem("token")}`
                                         },
                                         body: formData
                                     });
-                                    const updated = await fetch(`${API}/api/playlists`, {
-                                        headers: {
-                                            Authorization: `Bearer ${localStorage.getItem("token")}`
-                                        }
-                                    }).then(res => res.json());
-                                    setPlaylists(updated);
+                                    const newPlaylist = await res.json();
+                                    setPlaylists(prev => [...prev, newPlaylist]);
                                     setShowCreateModal(false);
                                     setNewPlaylistName("");
                                     setNewPlaylistImage(null);
-                                }}
-                            >
-                                Save
-                            </button>
+                                }}>Save</button>
                         </div>
                     </div>
                 </div>
@@ -595,8 +1007,7 @@ const Home = () => {
                         onClick={() => {
                             setShowCreateModal(true);
                             setShowPopup(false);
-                        }}
-                    >
+                        }}>
                         <div className="playlist-left">
                             <div className="playlist-icon plus">+</div>
                             <span>New playlist</span>
@@ -605,8 +1016,7 @@ const Home = () => {
                     <div className="playlist-list">
                         <div
                             className={`playlist-row ${likedSelected ? "selected" : ""}`}
-                            onClick={() => setLikedSelected(prev => !prev)}
-                        >
+                            onClick={() => setLikedSelected(prev => !prev)}>
                             <div className="playlist-left">
                                 <div className="playlist-icon heart">
                                     <img src={Heart} className="popup-heart" />
@@ -682,10 +1092,7 @@ const Home = () => {
                                     headers: { Authorization: `Bearer ${token}` }
                                 }).then(res => res.json());
                                 setLikedSongs(updatedLikes);
-                                const updatedPlaylists = await fetch(`${API}/api/playlists`, {
-                                    headers: { Authorization: `Bearer ${token}` }
-                                }).then(res => res.json());
-                                setPlaylists(updatedPlaylists);
+                                await fetchPlaylists();
                                 setShowPopup(false);
                                 setSelectedPlaylists([]);
                                 setLikedSelected(false);
@@ -693,6 +1100,16 @@ const Home = () => {
                     </div>
                 </div>
             )}
+            {showShare && (
+                <div className="playlist-popup">
+                    <h3>Share Playlist</h3>
+                    <input value={`${window.location.origin}/playlist/${selectedPlaylist._id}`} readOnly />
+                    <div className="popup-actions">
+                        <button onClick={() => setShowShare(false)}>Close</button>
+                    </div>
+                </div>
+            )}
+
         </div>
     );
 };

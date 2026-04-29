@@ -18,7 +18,7 @@ router.post("/", protect, upload.single("image"), async (req, res) => {
         const name = req.body?.name || req.body?.playlistName || "New Playlist";
         const playlist = await Playlist.create({
             name,
-            user: req.user._id,
+            user: req.user,
             image: req.file ? `/uploads/${req.file.filename}` : null,
             tracks: []
         });
@@ -31,7 +31,7 @@ router.post("/", protect, upload.single("image"), async (req, res) => {
 
 router.get("/", protect, async (req, res) => {
     try {
-        const playlists = await Playlist.find({ user: req.user._id });
+        const playlists = await Playlist.find({ user: req.user }).populate("tracks");
         res.json(playlists);
     } catch (err) {
         res.status(500).json({ message: "Error fetching playlists" });
@@ -49,6 +49,33 @@ router.post("/:id/add", protect, async (req, res) => {
         res.json(playlist);
     } catch (err) {
         res.status(500).json({ message: "Error adding song" });
+    }
+});
+
+router.delete("/:id/remove", protect, async (req, res) => {
+    try {
+        const { trackId } = req.body;
+        const playlist = await Playlist.findByIdAndUpdate(
+            req.params.id,
+            { $pull: { tracks: trackId } },
+            { new: true }
+        );
+        res.json(playlist);
+    } catch (err) {
+        res.status(500).json({ message: "Error removing song" });
+    }
+});
+
+router.get("/search/:query", protect, async (req, res) => {
+    try {
+        const q = req.params.query;
+        const playlists = await Playlist.find({
+            user: req.user,
+            name: { $regex: q, $options: "i" }
+        }).limit(10);
+        res.json(playlists);
+    } catch (err) {
+        res.status(500).json({ message: "Search failed" });
     }
 });
 

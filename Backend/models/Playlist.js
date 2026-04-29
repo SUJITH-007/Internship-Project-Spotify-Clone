@@ -6,16 +6,18 @@ const playlistSchema = new mongoose.Schema(
         type: String,
         required: true
     },
+    image:String,
     user: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "User"
     },
-    songs: [
+    tracks:[
         {
             type: mongoose.Schema.Types.ObjectId,
             ref: "Track"
         }
     ]
+    
 },
 { timestamps: true }
 );

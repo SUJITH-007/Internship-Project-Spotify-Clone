@@ -3,6 +3,9 @@ import { useNavigate } from "react-router-dom";
 import "../styles/contentCreator.css";
 import Select from "react-select";
 import spotifyLogo from "../Images/spotify-Logo.png";
+import { PieChart, Pie, Cell, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from "recharts";
+import axios from "axios";
+
 
 const artists = [
     { value: "bxkq", label: "bxkq" },
@@ -26,7 +29,10 @@ const artists = [
     { value: "MIIA", label: "MIIA" },
     { value: "NCTS", label: "NCTS" },
     { value: "Shreya Ghoshal", label: "Shreya Ghoshal" },
-    { value: "vyravl", label: "vyravl" }
+    { value: "vyravl", label: "vyravl" },
+    {value: "Kailash Kher", label: "Kailash Kher"},
+    {value: "Naresh Kamath", label: "Naresh Kamath"},
+    {value: "Nakama", label: "Nakama"}
 
 ];
 
@@ -47,7 +53,9 @@ const genres = [
     { value: "Disco", label: "Disco" },
     { value: "Traditional Music", label: "Traditional Music" },
     { value: "Motivational", label: "Motivational" },
-    { value: " Electro House", label: " Electro House" }
+    { value: " Electro House", label: " Electro House" },
+    { value: " Sufi music", label: " Sufi Music" },
+    { value: " Romantic Hindi", label: " Romantic Hindi" }
 ];
 
 const ContentCreator = () => {
@@ -66,7 +74,17 @@ const ContentCreator = () => {
     const [isPremium, setIsPremium] = useState("false");
     const [selectedOptions, setSelectedOptions] = useState([]);
     const [selectedGenres, setSelectedGenres] = useState([]);
+    const [topSongs, setTopSongs] = useState([]);
     const [editTrack, setEditTrack] = useState(null);
+    const [topArtists, setTopArtists] = useState([]);
+    const [songStats, setSongStats] = useState([]);
+    const [albums, setAlbums] = useState([]);
+    const [newAlbumName, setNewAlbumName] = useState("");
+    const [selectedAlbumMap, setSelectedAlbumMap] = useState({});
+    const [albumThumbnail, setAlbumThumbnail] = useState(null);
+    const [editingAlbumId, setEditingAlbumId] = useState(null);
+    const [editAlbumName, setEditAlbumName] = useState("");
+    const [editAlbumImage, setEditAlbumImage] = useState(null);
     const API = import.meta.env.VITE_API;
 
     const customSelectStyles = {
@@ -154,10 +172,10 @@ const ContentCreator = () => {
         }
     };
     const handleBulkFileChange = (e) => {
-    const file = e.target.files[0];
-    console.log("FILE SELECTED:", file);
-    setBulkFile(file);
-};
+        const file = e.target.files[0];
+        console.log("FILE SELECTED:", file);
+        setBulkFile(file);
+    };
     React.useEffect(() => {
         const fetchTracks = async () => {
             try {
@@ -179,12 +197,26 @@ const ContentCreator = () => {
                     return;
                 }
                 setTracks(data);
+                const map = {};
+                data.forEach(t => {
+                    if (t.albumId) map[t._id] = t.albumId;
+                });
+                setSelectedAlbumMap(map);
             } catch (error) {
                 console.error("Error fetching tracks:", error);
             }
         };
         fetchTracks();
     }, []);
+    React.useEffect(() => {
+        const fetchAlbums = async () => {
+            const res = await fetch(`${API}/api/albums`);
+            const data = await res.json();
+            setAlbums(data);
+        };
+        fetchAlbums();
+    }, []);
+
     const filteredTracks = Array.isArray(tracks) ? tracks.filter(track => {
         const query = searchQuery.toLowerCase();
         return (
@@ -243,35 +275,33 @@ const ContentCreator = () => {
     };
 
     const handleBulkUpload = async () => {
-    console.log("BUTTON CLICKED");
+        console.log("BUTTON CLICKED");
+        if (!bulkFile) {
+            console.log("NO FILE SELECTED");
+            alert("Please select a file");
+            return;
+        }
+        console.log("FILE:", bulkFile);
 
-    if (!bulkFile) {
-        console.log("NO FILE SELECTED");
-        alert("Please select a file");
-        return;
-    }
-
-    console.log("FILE:", bulkFile);
-
-    try {
-        const formData = new FormData();
-        formData.append("file", bulkFile);
-        const token = localStorage.getItem("token");
-        console.log("SENDING REQUEST...");
-        const res = await fetch(`${API}/api/tracks/bulk`, {
-            method: "POST",
-            headers: {
-                Authorization: `Bearer ${token}`
-            },
-            body: formData
-        });
-        console.log("RESPONSE STATUS:", res.status);
-        const data = await res.json();
-        console.log("RESPONSE DATA:", data);
-    } catch (err) {
-        console.error("ERROR:", err);
-    }
-};
+        try {
+            const formData = new FormData();
+            formData.append("file", bulkFile);
+            const token = localStorage.getItem("token");
+            console.log("SENDING REQUEST...");
+            const res = await fetch(`${API}/api/tracks/bulk`, {
+                method: "POST",
+                headers: {
+                    Authorization: `Bearer ${token}`
+                },
+                body: formData
+            });
+            console.log("RESPONSE STATUS:", res.status);
+            const data = await res.json();
+            console.log("RESPONSE DATA:", data);
+        } catch (err) {
+            console.error("ERROR:", err);
+        }
+    };
 
     const handleDelete = async (id) => {
         try {
@@ -319,6 +349,111 @@ const ContentCreator = () => {
             console.error(err);
         }
     };
+
+    const pieColors = ["#22c55e", "#ef4444", "#f59e0b"];
+    const [dashboard, setDashboard] = useState(null);
+    const fetchDashboard = async () => {
+        try {
+            // const token =localStorage.getItem("token");
+            const res = await axios.get(`${API}/api/dashboard`);
+            setDashboard(res.data);
+            const sorted = (res.data.topSongs || [])
+                .sort((a, b) => b.playCount - a.playCount)
+                .slice(0, 5);
+            setTopSongs(sorted);
+            setTopArtists(
+                (res.data.topArtists || [])
+                    .sort((a, b) => b.totalPlays - a.totalPlays)
+                    .slice(0, 5)
+            );
+            setSongStats([
+                { name: "Free Songs", value: res.data.freeSongs || 0 },
+                { name: "Premium Songs", value: res.data.premiumSongs || 0 }
+            ]);
+        } catch (error) {
+            console.log(error);
+        }
+    };
+    React.useEffect(() => {
+        fetchDashboard();
+        const interval = setInterval(fetchDashboard, 5000);
+        return () => clearInterval(interval);
+    }, []);
+
+    const createAlbum = async () => {
+        if (!newAlbumName.trim()) {
+            alert("Album name required");
+            return;
+        }
+        const formData = new FormData();
+        formData.append("name", newAlbumName);
+        if (albumThumbnail) formData.append("thumbnail", albumThumbnail);
+        const res = await fetch(`${API}/api/albums/create`, {
+            method: "POST",
+            body: formData
+        });
+        if (!res.ok) {
+            const text = await res.text();
+            console.log(text);
+            alert("Server error");
+            return;
+        }
+
+        const data = await res.json();
+        setAlbums(prev => [...prev, data]);
+        setNewAlbumName("");
+        setAlbumThumbnail(null);
+        document.querySelector('input[type="file"]').value = "";
+    };
+
+    const addToAlbum = async (trackId) => {
+        const albumId = selectedAlbumMap[trackId];
+        if (!albumId) return;
+        await fetch(`${API}/api/albums/add-track`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ albumId, trackId })
+        });
+        alert("Moved to album");
+    };
+
+    const removeFromAlbum = async (trackId) => {
+        await fetch(`${API}/api/albums/remove-track`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ trackId })
+        });
+        setSelectedAlbumMap(prev => ({
+            ...prev,
+            [trackId]: ""
+        }));
+        alert("Removed from album");
+    };
+
+    const deleteAlbum = async (id) => {
+        await fetch(`${API}/api/albums/${id}`, {
+            method: "DELETE"
+        });
+        setAlbums(prev => prev.filter(a => a._id !== id));
+    };
+
+    const updateAlbum = async (id, name, image) => {
+    const formData = new FormData();
+    formData.append("name", name);
+    if (image) formData.append("thumbnail", image);
+    const res = await fetch(`${API}/api/albums/${id}`, {
+        method: "PUT",
+        body: formData
+    });
+    const updated = await res.json();
+    setAlbums(prev =>
+        prev.map(a =>
+            a._id === id ? updated : a
+        )
+    );
+};
+
+
     return (
         <div className="creator-wrapper">
             <aside className="creator-sidebar">
@@ -332,6 +467,7 @@ const ContentCreator = () => {
                     <li onClick={() => setActiveTab("bulk")}>Bulk Upload</li>
                     <li onClick={() => setActiveTab("tracks")}>All Tracks</li>
                     <li onClick={() => setActiveTab("analytics")}>Analytics</li>
+                    <li onClick={() => setActiveTab("albums")}>Manage Albums</li>
                     <li onClick={handleLogout}>Logout</li>
                 </ul>
             </aside>
@@ -481,8 +617,33 @@ const ContentCreator = () => {
                                             <p>{track.artists?.join(", ")}</p>
                                         </div>
                                         <div className="track-actions">
-                                            <button className="edit_btn" onClick={() => setEditTrack(track)}>Edit</button>
-                                            <button className="delete-btn" onClick={() => handleDelete(track._id)}>Delete</button>
+                                            <select
+                                                value={selectedAlbumMap[track._id] || ""}
+                                                onChange={(e) =>
+                                                    setSelectedAlbumMap(prev => ({
+                                                        ...prev,
+                                                        [track._id]: e.target.value
+                                                    }))
+                                                }>
+                                                <option value="">Select Album</option>
+                                                {albums.map(a => (
+                                                    <option key={a._id} value={a._id}>
+                                                        {a.name}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                            <button className="move-bttn" onClick={() => addToAlbum(track._id)}>
+                                                Move
+                                            </button>
+                                            <button className="remove-bttn" onClick={() => removeFromAlbum(track._id)}>
+                                                Remove
+                                            </button>
+                                            <button className="edit_btn" onClick={() => setEditTrack(track)}>
+                                                Edit
+                                            </button>
+                                            <button className="delete-btn" onClick={() => handleDelete(track._id)}>
+                                                Delete
+                                            </button>
                                         </div>
                                     </div>
                                 ))}
@@ -505,6 +666,218 @@ const ContentCreator = () => {
                                 )}
                             </>
                         )}
+                    </section>
+                )}
+                {activeTab === "analytics" && (<>
+                    <h1 className="analytics-title">Analytics</h1>
+                    <div className="analytics-container1">
+                        <section className="music-analytics1">
+                            <h5>Top 5 Most listened songs</h5>
+                            {topSongs.length > 0 && (
+                                <ResponsiveContainer width="100%" height={300}>
+                                    <BarChart data={topSongs}
+                                        margin={{ top: 20, right: 20, left: 0, bottom: 40 }}
+                                        barCategoryGap="30%">
+                                        <CartesianGrid strokeDasharray="3 3" />
+                                        <XAxis
+                                            dataKey="title"
+                                            interval={0}
+                                            angle={-15}
+                                            textAnchor="end"
+                                            height={60}
+                                            tickFormatter={(value) => value.length > 10 ? value.slice(0, 10) + "..." : value} />
+                                        <YAxis
+                                            domain={[0, (dataMax) => Math.ceil(dataMax / 50) * 50]}
+                                            tickCount={6} />
+                                        <Tooltip />
+                                        <Bar
+                                            dataKey="playCount"
+                                            fill="#1ed760"
+                                            barSize={18}
+                                            radius={[5, 5, 0, 0]}
+                                        />
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            )}
+                        </section>
+                        <section className="music-analytics2">
+                            <h5>Top 5 most popular artist</h5>
+                            {topArtists.length > 0 && (
+                                <ResponsiveContainer width="100%" height={300}>
+                                    <BarChart
+                                        data={topArtists}
+                                        margin={{ top: 20, right: 20, left: 0, bottom: 40 }}
+                                        barCategoryGap="30%"
+                                    >
+                                        <CartesianGrid strokeDasharray="3 3" />
+                                        <XAxis
+                                            dataKey="name"
+                                            interval={0}
+                                            angle={-15}
+                                            textAnchor="end"
+                                            height={60}
+                                            tickFormatter={(v) =>
+                                                v.length > 10 ? v.slice(0, 10) + "..." : v
+                                            } />
+                                        <YAxis
+                                            domain={[0, (dataMax) => Math.ceil(dataMax / 50) * 50]}
+                                            tickCount={6} />
+                                        <Tooltip />
+                                        <Bar
+                                            dataKey="totalPlays"
+                                            fill="#ff4d4f"
+                                            barSize={15}
+                                            radius={[5, 5, 0, 0]}
+                                        />
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            )}
+                        </section>
+                    </div>
+                    <div className="analytics-container2">
+                        <section className="music-analytics3">
+                            <h5>Song Distribution</h5>
+                            {songStats.length > 0 && (
+                                <ResponsiveContainer width="100%" height={300}>
+                                    <PieChart>
+                                        <Pie
+                                            data={songStats}
+                                            dataKey="value"
+                                            nameKey="name"
+                                            outerRadius={100}
+                                            label>
+                                            {songStats.map((entry, index) => (
+                                                <Cell
+                                                    key={index}
+                                                    fill={index === 0 ? "#22c55e" : "#ff4d4f"}
+                                                />
+                                            ))}
+                                        </Pie>
+                                        <Tooltip />
+                                        <Legend />
+                                    </PieChart>
+                                </ResponsiveContainer>
+                            )}
+                        </section>
+                        <section className="music-analytics4">
+                            <h5>User Distribution</h5>
+                            {dashboard && (
+                                <ResponsiveContainer width="100%" height={320}>
+                                    <PieChart>
+                                        <Pie
+                                            data={dashboard.statusChart}
+                                            dataKey="value"
+                                            nameKey="name"
+                                            outerRadius={110}
+                                            label>
+                                            {dashboard.statusChart.map((entry, index) => (
+                                                <Cell
+                                                    key={index}
+                                                    fill={pieColors[index % pieColors.length]}
+                                                />
+                                            ))}
+                                        </Pie>
+                                        <Tooltip />
+                                        <Legend />
+                                    </PieChart>
+                                </ResponsiveContainer>
+                            )}
+                        </section>
+                    </div>
+                    <div className="analytics-container3">
+                        <section className="music-analytics5">
+                        </section>
+                        <section className="music-analytics6">
+                        </section>
+                    </div>
+                    <div className="analytics-container4">
+                        <section className="music-analytics7">
+                        </section>
+                        <section className="music-analytics8">
+                        </section>
+                    </div>
+                </>
+                )}
+                {activeTab === "albums" && (
+                    <section className="add-music-section">
+                        <h2>Manage Albums</h2>
+                        <div className="album-create">
+                            <input
+                                type="text"
+                                placeholder="Album Name"
+                                value={newAlbumName}
+                                onChange={(e) => setNewAlbumName(e.target.value)}
+                            />
+                            <input
+                                type="file"
+                                accept="image/*"
+                                value=""
+                                onChange={(e) => setAlbumThumbnail(e.target.files[0])}
+                            />
+                            <button onClick={createAlbum}>Create</button>
+                        </div>
+                        <div className="album-grid">
+                            {albums.map(a => (
+                                <div key={a._id} className="album-card">
+                                    {editingAlbumId === a._id ? (
+                                        <>
+                                            <input
+                                                className="album-input"
+                                                value={editAlbumName}
+                                                onChange={(e) => setEditAlbumName(e.target.value)}
+                                            />
+                                            <input
+                                                type="file"
+                                                onChange={(e) => setEditAlbumImage(e.target.files[0])}
+                                            />
+                                            <div className="album-actions">
+                                                <button
+                                                    className="edit_btn"
+                                                    onClick={() => {
+                                                        updateAlbum(a._id, editAlbumName, editAlbumImage);
+                                                        setEditingAlbumId(null);
+                                                    }}
+                                                >
+                                                    Update
+                                                </button>
+                                                <button
+                                                    className="remove-btn"
+                                                    onClick={() => setEditingAlbumId(null)}
+                                                >
+                                                    Cancel
+                                                </button>
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <img
+                                                src={a.coverImage ? `${API}/uploads/${a.coverImage}` : "/placeholder.png"}
+                                                className="album-cover"
+                                            />
+                                            <p className="album-title">{a.name}</p>
+                                            <div className="album-actions">
+                                                <button
+                                                    className="edit_btn"
+                                                    onClick={() => {
+                                                        setEditingAlbumId(a._id);
+                                                        setEditAlbumName(a.name);
+                                                    }}
+                                                >
+                                                    Edit
+                                                </button>
+                                                <button
+                                                    className="delete-btn"
+                                                    onClick={() => deleteAlbum(a._id)}
+                                                >
+                                                    Delete
+                                                </button>
+                                            </div>
+                                        </>
+                                    )}
+
+                                </div>
+                            ))}
+                        </div>
                     </section>
                 )}
             </main>

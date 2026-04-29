@@ -1,6 +1,8 @@
 const Razorpay = require("razorpay");
 const crypto = require("crypto");
 const User = require("../models/User");
+const sendEmail = require("../utils/sendEmail");
+const generateInvoice = require("../utils/generateInvoice");
 
 const razorpay = new Razorpay({
     key_id: process.env.RAZORPAY_KEY_ID,
@@ -31,7 +33,7 @@ exports.verifyPayment = async (req, res) => {
             plan
         } = req.body;
         const body = razorpay_order_id + "|" + razorpay_payment_id;
-        const expectedSignature = crypto
+        const expectedSignature = require("crypto")
             .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
             .update(body.toString())
             .digest("hex");
@@ -42,7 +44,14 @@ exports.verifyPayment = async (req, res) => {
         user.subscription.plan = plan;
         user.subscription.startDate = new Date();
         await user.save();
-        res.json({ message: "Payment successful, plan updated" });
+        let amount =0;
+        if(plan === "lite") amount =139;
+        if(plan === "standard") amount = 199;
+        if(plan === "platinum") amount = 299;
+        if(plan === "student") amount = 99;
+        const invoicePath = generateInvoice(user,plan,amount);
+        await sendEmail(user, invoicePath, plan);
+        res.json({ message: "Payment successful, invoice sent" });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }

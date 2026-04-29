@@ -1,0 +1,32 @@
+const PDFDocument = require("pdfkit");
+const fs = require("fs");
+const generateInvoice = (user, plan, baseAmount) => {
+    const filePath = `./uploads/invoices/invoice_${Date.now()}.pdf`;
+    const total = baseAmount;
+    const gst = (baseAmount * 18) / 118;
+    const priceWithoutGST = baseAmount - gst;
+    const doc = new PDFDocument({ margin: 50 });
+    doc.pipe(fs.createWriteStream(filePath));
+    doc.fontSize(24).text("Spotify", { align: "center" });
+    doc.moveDown();
+    doc.fontSize(20).text("Enjoy Spotify Premium", { align: "center" });
+    doc.moveDown();
+    doc.fontSize(10).text(`Date:${new Date().toLocaleDateString()},`, { align: "center" });
+    doc.text(`Order ID : ${Date.now()}`, { align: "center" });
+    doc.moveDown(2);
+    doc.fontSize(12).text(`Plan :${plan}`);
+    doc.text(`Price (Excl. GST) : Rs ${priceWithoutGST.toFixed(2)}`);
+    doc.moveDown();
+    doc.text(`GST (18%) : Rs ${gst.toFixed(2)}`);
+    doc.moveDown(2);
+    doc.font("Helvetica-Bold");
+    doc.text(`Total (Incl. GST) : Rs ${total.toFixed(2)}`);
+    doc.moveDown(2);
+    doc.font("Helvetica");
+    doc.text(`User : ${user.username}`);
+    doc.text(`Email : ${user.email}`);
+    doc.end();
+    return filePath;
+};
+
+module.exports = generateInvoice;
