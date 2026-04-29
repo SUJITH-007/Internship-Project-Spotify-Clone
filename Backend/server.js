@@ -15,13 +15,7 @@ const albumRoutes = require("./routes/albumRoutes");
 const app = express();
 
 app.use(express.json());
-app.use(cors({
-  origin: [
-    "http://localhost:3000",
-    "https://spotify-clone-eight-kohl.vercel.app/"
-  ],
-  credentials: true
-}));
+app.use(cors());
 
 
 
