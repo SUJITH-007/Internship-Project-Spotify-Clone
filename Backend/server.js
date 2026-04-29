@@ -14,12 +14,16 @@ const playRoutes = require("./routes/playRoutes");
 const albumRoutes = require("./routes/albumRoutes");
 const app = express();
 
+app.use(express.json());
 app.use(cors({
-  origin: "https://internship-project-spotify-clone.onrender.com", 
+  origin: [
+    "http://localhost:3000",
+    "https://internship-project-spotify-clone-33d2g8s11.vercel.app"
+  ],
   credentials: true
 }));
 
-app.use(express.json());
+
 
 mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log("MongoDB Connected"))
