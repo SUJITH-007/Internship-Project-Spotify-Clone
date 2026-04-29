@@ -18,7 +18,7 @@ app.use(express.json());
 app.use(cors({
   origin: [
     "http://localhost:3000",
-    "https://internship-project-spotify-clone-33d2g8s11.vercel.app"
+    "https://spotify-clone-eight-kohl.vercel.app/"
   ],
   credentials: true
 }));
