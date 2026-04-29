@@ -15,7 +15,7 @@ const albumRoutes = require("./routes/albumRoutes");
 const app = express();
 
 app.use(cors({
-  origin: "http://localhost:3000", 
+  origin: "https://internship-project-spotify-clone.onrender.com", 
   credentials: true
 }));
 
