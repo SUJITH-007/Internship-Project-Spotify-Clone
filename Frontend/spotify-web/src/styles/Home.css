@@ -1998,3 +1998,81 @@
   object-fit: cover;
   border-radius: 4px;
 }
+
+.profile-header-section {
+    position: relative;
+}
+
+.profile-back-btn {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+}
+
+.profile-back-btn img {
+    width: 24px;
+    height: 24px;
+}
+
+.sidebar-scroll {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  overflow-y: auto;
+  height: 100%;
+  padding-bottom: 20px;
+}
+
+.sidebar-scroll::-webkit-scrollbar {
+  display: none;
+}
+.sidebar-scroll {
+  scrollbar-width: none;
+}
+
+.sidebar-item {
+  width: 50px;
+  height: 50px;
+  border-radius: 6px;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.sidebar-item:hover {
+  transform: scale(1.08);
+}
+
+.sidebar-thumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.close_search {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  opacity: 0.7;
+}
+
+.close_search:hover {
+  opacity: 1;
+  transform: scale(1.1);
+}
+
+.search_results {
+  position: absolute;
+  top: 55px;
+  left: 0;
+  width: 100%;
+  background: #181818;
+  border-radius: 10px;
+  max-height: 300px;
+  overflow-y: auto;
+  z-index: 9999;
+  border: 1px solid #333;
+  padding: 8px;
+}

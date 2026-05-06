@@ -12,8 +12,9 @@ import Community from "../Images/Community.png";
 import libraryIcons from "../Images/libraryIcon.png";
 import add from "../Images/plus.png";
 import Heart from "../Images/heart.png";
-import save from "../Images/save.png";
+// import save from "../Images/save.png";
 import Back from "../Images/back.png";
+import Close from "../Images/close.png";
 import libraryOpen from "../Images/libraryOpen.png";
 import SongPlayButton from "../Images/Song-play-button.png";
 import NextButton from "../Images/next.png";
@@ -59,6 +60,7 @@ const Home = () => {
     const [isSaving, setIsSaving] = useState(false);
     const [looping, setLoop] = useState(false);
     const [view, setView] = useState("home");
+    const [searchPageResults, setSearchPageResults] = useState(null);
     const [currentIndex, setCurrentIndex] = useState(0);
     const [showShare, setShowShare] = useState(false);
     const [isShuffling, setIsShuffling] = useState(false);
@@ -207,6 +209,7 @@ const Home = () => {
         }
         if (!query.trim()) {
             setShowSearch(false);
+            setSearchResults({ tracks: [], albums: [], playlists: [] });
             return;
         }
         searchTimeout.current = setTimeout(async () => {
@@ -224,19 +227,17 @@ const Home = () => {
                 const tracksData = await tracksRes.json();
                 const albumsData = await albumsRes.json();
                 const playlistsData = await playlistsRes.json();
-                console.log("TRACKS:", tracksData);
-                console.log("ALBUMS:", albumsData);
-                console.log("PLAYLISTS:", playlistsData);
-                setSearchResults({
+                const results = {
                     tracks: Array.isArray(tracksData) ? tracksData : tracksData.tracks || [],
                     albums: Array.isArray(albumsData) ? albumsData : albumsData.albums || [],
                     playlists: Array.isArray(playlistsData) ? playlistsData : playlistsData.playlists || []
-                });
+                };
+                setSearchResults(results);
                 setShowSearch(true);
             } catch (err) {
                 console.error("Search error", err);
             }
-        }, 400);
+        }, 300);
     };
 
     useEffect(() => {
@@ -401,7 +402,22 @@ const Home = () => {
                             value={searchQuery}
                             onChange={(e) => handleSearch(e.target.value)}
                             onFocus={() => searchQuery && setShowSearch(true)}
+                            onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                    setSearchPageResults(searchResults);
+                                    setView("search");
+                                    setShowSearch(false);
+                                    setSearchQuery("");
+                                }
+                            }}
                         />
+                        {searchQuery && (
+                            <img src={Close} className="close_search" onClick={() => {
+                                setSearchQuery("");
+                                setShowSearch(false);
+                                setSearchResults({ tracks: [], albums: [], playlists: [] });
+                            }} />
+                        )}
                         <div className="search-divider"></div>
                         <img src={libraryIcon} alt="Library" className="library-icon" />
                         {showSearch && (
@@ -461,20 +477,69 @@ const Home = () => {
             </nav>
             <div className="home_layout">
                 <aside className="home_sidebar">
-                    <div className="library-icons-div">
-                        <img src={libraryIcons} className="library-img" alt="Libray" />
-                        <img src={libraryOpen} className="libraryOpen-icon" alt="libraryOpen-icon" />
-                    </div>
-                    <div className="Plus-div" onClick={() => setShowCreateModal(true)}>
-                        <img src={add} className="homeadd-icon" alt="Add" />
-                    </div>
-                    <div className="like-div">
-                        <img src={Heart} className="like-icon" alt="like icon" />
-                    </div>
-                    <div className="save-div">
+                    <div className="sidebar-scroll">
+                        <div className="library-icons-div">
+                            <img src={libraryIcons} className="library-img" alt="Libray" />
+                            <img src={libraryOpen} className="libraryOpen-icon" alt="libraryOpen-icon" />
+                        </div>
+                        <div className="Plus-div" onClick={() => setShowCreateModal(true)}>
+                            <img src={add} className="homeadd-icon" alt="Add" />
+                        </div>
+                        <div className="like-div" onClick={() => setView("liked")}>
+                            <img src={Heart} className="like-icon" alt="like icon" />
+                        </div>
+                        {playlists.map((p) => (
+                            <div key={p._id}
+                                className="sidebar-item"
+                                onClick={async () => {
+                                    const res = await fetch(`${API}/api/playlists`, {
+                                        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+                                    });
+                                    const data = await res.json();
+                                    const full = data.find(x => x._id === p._id);
+                                    setSelectedPlaylist(full);
+                                    setView("playlist");
+                                }}>
+                                <img
+                                    src={
+                                        p.image
+                                            ? (p.image.startsWith("http") ? p.image : `${API}${p.image}`)
+                                            : MusicNote
+                                    }
+                                    className="sidebar-thumb"
+                                />
+                            </div>
+                        ))}
+
+                        {albums
+                            .filter(album =>
+                                album.tracks?.some(track =>
+                                    likedSongs.some(liked => liked._id === track._id)
+                                )
+                            )
+                            .map((a) => (
+                                <div
+                                    key={a._id}
+                                    className="sidebar-item"
+                                    onClick={async () => {
+                                        await fetchAlbums();
+                                        const updated = albums.find(x => x._id === a._id);
+                                        setSelectedAlbum(updated);
+                                        setView("album");
+                                    }} >
+                                    <img
+                                        src={
+                                            a.coverImage
+                                                ? `${API}/uploads/${a.coverImage}`
+                                                : MusicNote
+                                        }
+                                        className="sidebar-thumb" />
+                                </div>
+                            ))}
+                        {/* <div className="save-div">
                         <img src={save} className="save-icon" alt="save-icon" />
+                    </div> */}
                     </div>
-                    <div className="playlist-div"></div>
                 </aside>
 
 
@@ -656,6 +721,44 @@ const Home = () => {
                                     </div>
                                 ))}
                             </div>
+                            <section className="home_section">
+                                <div className="main_footer">
+                                    <div className="footer_columns">
+                                        <div className="footer-column">
+                                            <h4>Company</h4>
+                                            <p>About</p>
+                                            <p>Jobs</p>
+                                            <p>For the Record</p>
+                                        </div>
+                                        <div className="footer_column">
+                                            <h4>Communities</h4>
+                                            <p>For Artists</p>
+                                            <p>Developers</p>
+                                            <p>Advertising</p>
+                                            <p>Investors</p>
+                                            <p>Vendors</p>
+                                        </div>
+                                        <div className="footer_column">
+                                            <h4>Useful links</h4>
+                                            <p>Support</p>
+                                            <p>Free Mobile App</p>
+                                            <p>Popular by Country</p>
+                                            <p>Import your music</p>
+                                        </div>
+                                        <div className="footer_column">
+                                            <h4>Spotify Plans</h4>
+                                            <p>Premium Lite</p>
+                                            <p>Premium Standard</p>
+                                            <p>Premium Platinum</p>
+                                            <p>Premium Student</p>
+                                            <p>Spotify Free</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="main_footer2">
+                                    <div className="Footer_terms"><p>Legal</p><p>Safety & Privacy</p><p>Privacy Policy</p><p>Cookies</p><p>About Ads</p><p>Accessibility</p></div><div className="SAB"><p>© 2026 Spotify AB</p></div>
+                                </div>
+                            </section>
                         </div>
                     )}
                     {view === "playlist" && selectedPlaylist && (
@@ -710,6 +813,44 @@ const Home = () => {
                                     </div>
                                 ))}
                             </div>
+                            <section className="home_section">
+                                <div className="main_footer">
+                                    <div className="footer_columns">
+                                        <div className="footer-column">
+                                            <h4>Company</h4>
+                                            <p>About</p>
+                                            <p>Jobs</p>
+                                            <p>For the Record</p>
+                                        </div>
+                                        <div className="footer_column">
+                                            <h4>Communities</h4>
+                                            <p>For Artists</p>
+                                            <p>Developers</p>
+                                            <p>Advertising</p>
+                                            <p>Investors</p>
+                                            <p>Vendors</p>
+                                        </div>
+                                        <div className="footer_column">
+                                            <h4>Useful links</h4>
+                                            <p>Support</p>
+                                            <p>Free Mobile App</p>
+                                            <p>Popular by Country</p>
+                                            <p>Import your music</p>
+                                        </div>
+                                        <div className="footer_column">
+                                            <h4>Spotify Plans</h4>
+                                            <p>Premium Lite</p>
+                                            <p>Premium Standard</p>
+                                            <p>Premium Platinum</p>
+                                            <p>Premium Student</p>
+                                            <p>Spotify Free</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="main_footer2">
+                                    <div className="Footer_terms"><p>Legal</p><p>Safety & Privacy</p><p>Privacy Policy</p><p>Cookies</p><p>About Ads</p><p>Accessibility</p></div><div className="SAB"><p>© 2026 Spotify AB</p></div>
+                                </div>
+                            </section>
                         </div>
                     )}
                     {view === "profile" && (
@@ -718,6 +859,11 @@ const Home = () => {
                                 <img src={Back} alt="back" />
                             </button>
                             <div className="profile-header-section">
+                                <button
+                                    className="profile-back-btn"
+                                    onClick={() => setView("home")}>
+                                    <img src={Back} alt="back" />
+                                </button>
                                 <div className="profile-image-wrapper">
                                     <img
                                         src={user?.profileImage?.startsWith("http")
@@ -790,6 +936,44 @@ const Home = () => {
                                     ))}
                                 </div>
                             </div>
+                            <section className="home_section">
+                                <div className="main_footer">
+                                    <div className="footer_columns">
+                                        <div className="footer-column">
+                                            <h4>Company</h4>
+                                            <p>About</p>
+                                            <p>Jobs</p>
+                                            <p>For the Record</p>
+                                        </div>
+                                        <div className="footer_column">
+                                            <h4>Communities</h4>
+                                            <p>For Artists</p>
+                                            <p>Developers</p>
+                                            <p>Advertising</p>
+                                            <p>Investors</p>
+                                            <p>Vendors</p>
+                                        </div>
+                                        <div className="footer_column">
+                                            <h4>Useful links</h4>
+                                            <p>Support</p>
+                                            <p>Free Mobile App</p>
+                                            <p>Popular by Country</p>
+                                            <p>Import your music</p>
+                                        </div>
+                                        <div className="footer_column">
+                                            <h4>Spotify Plans</h4>
+                                            <p>Premium Lite</p>
+                                            <p>Premium Standard</p>
+                                            <p>Premium Platinum</p>
+                                            <p>Premium Student</p>
+                                            <p>Spotify Free</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="main_footer2">
+                                    <div className="Footer_terms"><p>Legal</p><p>Safety & Privacy</p><p>Privacy Policy</p><p>Cookies</p><p>About Ads</p><p>Accessibility</p></div><div className="SAB"><p>© 2026 Spotify AB</p></div>
+                                </div>
+                            </section>
                         </div>
                     )}
                     {view === "album" && selectedAlbum && (
@@ -849,6 +1033,124 @@ const Home = () => {
                                     </div>
                                 ))}
                             </div>
+                             <section className="home_section">
+                                <div className="main_footer">
+                                    <div className="footer_columns">
+                                        <div className="footer-column">
+                                            <h4>Company</h4>
+                                            <p>About</p>
+                                            <p>Jobs</p>
+                                            <p>For the Record</p>
+                                        </div>
+                                        <div className="footer_column">
+                                            <h4>Communities</h4>
+                                            <p>For Artists</p>
+                                            <p>Developers</p>
+                                            <p>Advertising</p>
+                                            <p>Investors</p>
+                                            <p>Vendors</p>
+                                        </div>
+                                        <div className="footer_column">
+                                            <h4>Useful links</h4>
+                                            <p>Support</p>
+                                            <p>Free Mobile App</p>
+                                            <p>Popular by Country</p>
+                                            <p>Import your music</p>
+                                        </div>
+                                        <div className="footer_column">
+                                            <h4>Spotify Plans</h4>
+                                            <p>Premium Lite</p>
+                                            <p>Premium Standard</p>
+                                            <p>Premium Platinum</p>
+                                            <p>Premium Student</p>
+                                            <p>Spotify Free</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="main_footer2">
+                                    <div className="Footer_terms"><p>Legal</p><p>Safety & Privacy</p><p>Privacy Policy</p><p>Cookies</p><p>About Ads</p><p>Accessibility</p></div><div className="SAB"><p>© 2026 Spotify AB</p></div>
+                                </div>
+                            </section>
+                        </div>
+                    )}
+                    {view === "search" && searchPageResults && (
+                        <div className="home_section">
+                            <div className="playlist-top">
+                                <button className="backbtn" onClick={() => setView("home")}>
+                                    <img src={Back} />
+                                </button>
+                            </div>
+                            <h2>Albums</h2>
+                            <div className="section_box">
+                                {searchPageResults.albums.map(a => (
+                                    <div key={a._id} className="album_card"
+                                        onClick={async () => {
+                                            await fetchAlbums();
+                                            const updated = albums.find(x => x._id === a._id);
+                                            setSelectedAlbum(updated);
+                                            setView("album");
+                                        }}>
+                                        <img
+                                            src={a.coverImage ? `${API}/uploads/${a.coverImage}` : MusicNote}
+                                            className="album_cover"
+                                        />
+                                        <p>{a.name}</p>
+                                    </div>
+                                ))}
+                            </div>
+                            <h2>Songs</h2>
+                            {searchPageResults.tracks.map(track => (
+                                <div key={track._id} className="liked-row" onClick={() => playSong(track)}>
+                                    <img src={`${API}/${track.thumbnail}`} className="liked-img" />
+                                    <div>
+                                        <p>{track.title}</p>
+                                    </div>
+                                </div>
+                            ))}
+                            <h2>Playlists</h2>
+                            {searchPageResults.playlists.map(p => (
+                                <div key={p._id} className="liked-row">
+                                    <p>{p.name}</p>
+                                </div>
+                            ))}
+                             <section className="home_section">
+                                <div className="main_footer">
+                                    <div className="footer_columns">
+                                        <div className="footer-column">
+                                            <h4>Company</h4>
+                                            <p>About</p>
+                                            <p>Jobs</p>
+                                            <p>For the Record</p>
+                                        </div>
+                                        <div className="footer_column">
+                                            <h4>Communities</h4>
+                                            <p>For Artists</p>
+                                            <p>Developers</p>
+                                            <p>Advertising</p>
+                                            <p>Investors</p>
+                                            <p>Vendors</p>
+                                        </div>
+                                        <div className="footer_column">
+                                            <h4>Useful links</h4>
+                                            <p>Support</p>
+                                            <p>Free Mobile App</p>
+                                            <p>Popular by Country</p>
+                                            <p>Import your music</p>
+                                        </div>
+                                        <div className="footer_column">
+                                            <h4>Spotify Plans</h4>
+                                            <p>Premium Lite</p>
+                                            <p>Premium Standard</p>
+                                            <p>Premium Platinum</p>
+                                            <p>Premium Student</p>
+                                            <p>Spotify Free</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="main_footer2">
+                                    <div className="Footer_terms"><p>Legal</p><p>Safety & Privacy</p><p>Privacy Policy</p><p>Cookies</p><p>About Ads</p><p>Accessibility</p></div><div className="SAB"><p>© 2026 Spotify AB</p></div>
+                                </div>
+                            </section>
                         </div>
                     )}
                 </main>

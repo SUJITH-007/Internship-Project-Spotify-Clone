@@ -7,7 +7,7 @@ const bcrypt = require("bcryptjs");
 const PlaySession = require("../models/PlaySession");
 const Track = require("../models/Track");
 
-router.put("/update",protect,upload.single("profileImage"),
+router.put("/update", protect, upload.single("profileImage"),
     async (req, res) => {
         try {
             const user = await User.findById(req.user);
@@ -45,26 +45,29 @@ router.get("/dashboard", protect, async (req, res) => {
         const artistCount = {};
         sessions.forEach(session => {
             const track = session.track;
-            if (!track) return;
+            if (!track || !track._id) return;
             const trackId = track._id.toString();
             trackCount[trackId] = trackCount[trackId]
                 ? trackCount[trackId] + 1
                 : 1;
-            track.artists.forEach(artist => {
-                artistCount[artist] = artistCount[artist]
-                    ? artistCount[artist] + 1
-                    : 1;
-            });
+            if (Array.isArray(track.artists)) {
+                track.artists.forEach(artist => {
+                    artistCount[artist] = artistCount[artist]
+                        ? artistCount[artist] + 1
+                        : 1;
+                });
+            }
         });
         const topTracks = Object.entries(trackCount)
             .sort((a, b) => b[1] - a[1])
             .slice(0, 5)
             .map(([trackId, count]) => {
-                const track = sessions.find(
-                    s => s.track._id.toString() === trackId
-                ).track;
-                return { ...track._doc, plays: count };
-            });
+                const session = sessions.find(
+                    s => s.track && s.track._id.toString() === trackId
+                );
+                if (!session || !session.track) return null;
+                return { ...session.track._doc, plays: count };
+            }).filter(Boolean);
         const topArtists = Object.entries(artistCount)
             .sort((a, b) => b[1] - a[1])
             .slice(0, 5)
