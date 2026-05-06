@@ -249,6 +249,12 @@ const Home = () => {
         document.addEventListener("mousedown", handleClickOutside);
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
+    useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+        navigate("/"); 
+    }
+}, []);
 
     const playSong = async (track) => {
         const index = tracks.findIndex(t => t._id === track._id);
@@ -369,6 +375,11 @@ const Home = () => {
             console.error("Update error:", err);
             setIsSaving(false);
         }
+    };
+    const handleLogout = () => {
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        navigate("/");
     };
     const startSession = async (trackId) => {
         const res = await fetch(`${API}/api/play/start`, {
@@ -880,6 +891,9 @@ const Home = () => {
                                     </p>
                                     <button className="edit-btn" onClick={() => setShowEdit(true)}>
                                         Edit Profile
+                                    </button>
+                                    <button className="logout-bttn" onClick={handleLogout}>
+                                        Logout
                                     </button>
                                 </div>
                             </div>

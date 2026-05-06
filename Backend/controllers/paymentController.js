@@ -4,6 +4,7 @@ const User = require("../models/User");
 const sendEmail = require("../utils/sendEmail");
 const generateInvoice = require("../utils/generateInvoice");
 
+
 const razorpay = new Razorpay({
     key_id: process.env.RAZORPAY_KEY_ID,
     key_secret: process.env.RAZORPAY_KEY_SECRET,
@@ -49,7 +50,7 @@ exports.verifyPayment = async (req, res) => {
         if(plan === "standard") amount = 199;
         if(plan === "platinum") amount = 299;
         if(plan === "student") amount = 99;
-        const invoicePath = generateInvoice(user,plan,amount);
+        const invoicePath = await generateInvoice(user, plan, amount);
         await sendEmail(user, invoicePath, plan);
         res.json({ message: "Payment successful, invoice sent" });
     } catch (err) {

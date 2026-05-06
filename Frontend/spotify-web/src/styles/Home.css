@@ -2076,3 +2076,18 @@
   border: 1px solid #333;
   padding: 8px;
 }
+
+.logout-bttn {
+    margin-top: 10px;
+    padding: 10px 20px;
+    background-color: #e91429;
+    color: white;
+    border: none;
+    border-radius: 20px;
+    cursor: pointer;
+    font-weight: 300;
+}
+
+.logout-bttn:hover {
+    background-color: #ff2d3f;
+}
