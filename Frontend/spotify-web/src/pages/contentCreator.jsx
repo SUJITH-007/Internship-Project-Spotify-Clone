@@ -32,7 +32,8 @@ const artists = [
     { value: "vyravl", label: "vyravl" },
     {value: "Kailash Kher", label: "Kailash Kher"},
     {value: "Naresh Kamath", label: "Naresh Kamath"},
-    {value: "Nakama", label: "Nakama"}
+    {value: "Nakama", label: "Nakama"},
+    {value: "Billie Eilish", label: "Billie Eilish"}
 
 ];
 
