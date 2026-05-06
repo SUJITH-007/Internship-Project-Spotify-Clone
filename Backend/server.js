@@ -41,6 +41,8 @@ app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });   
 const protect = require("./middleware/authMiddleware");
-app.get("/api/profile", protect, (req, res) => {
-  res.json({ message: "Protected route accessed", userId: req.user });
+const User = require("./models/User");
+app.get("/api/profile", protect, async (req, res) => {
+  const user = await User.findById(req.user);
+  res.json(user);
 });

@@ -74,6 +74,25 @@ const Home = () => {
     });
     const [showSearch, setShowSearch] = useState(false);
     const API = import.meta.env.VITE_API;
+    const [user, setUser] = useState(() => {
+        try {
+            const stored = localStorage.getItem("user");
+            return stored ? JSON.parse(stored) : null;
+        } catch {
+            return null;
+        }
+    });
+    const fetchUser = async () => {
+    const token = localStorage.getItem("token");
+    const res = await fetch(`${API}/api/profile`, {
+        headers: {
+            Authorization: `Bearer ${token}`
+        }
+    });
+    const data = await res.json();
+    localStorage.setItem("user", JSON.stringify(data));
+    setUser(data);
+};
 
     const [dashboard, setDashboard] = useState({
         topTracks: [],
@@ -132,6 +151,7 @@ const Home = () => {
             setAlbums([]);
         }
     };
+    
 
     useEffect(() => {
         const token = localStorage.getItem("token");
@@ -139,6 +159,7 @@ const Home = () => {
             window.location.href = "/login";
             return;
         }
+        fetchUser();
         fetch(`${API}/api/tracks`, {
             headers: {
                 Authorization: `Bearer ${token}`
@@ -192,14 +213,6 @@ const Home = () => {
             audioRef.current.play();
         }
     }, [currentSong]);
-    const [user, setUser] = useState(() => {
-        try {
-            const stored = localStorage.getItem("user");
-            return stored ? JSON.parse(stored) : null;
-        } catch {
-            return null;
-        }
-    });
 
     const searchTimeout = useRef(null);
     const handleSearch = (query) => {

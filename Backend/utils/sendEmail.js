@@ -6,7 +6,6 @@ if (!process.env.RESEND_API_KEY) {
 }
 
 const resend = new Resend(process.env.RESEND_API_KEY);
-
 const sendEmail = async (user, invoicePath, plan) => {
     try {
         await resend.emails.send({

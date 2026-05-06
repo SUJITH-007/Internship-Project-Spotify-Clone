@@ -14,43 +14,66 @@ import add from "../Images/plus.png";
 
 const Subscriptions = () => {
     const navigate = useNavigate();
-    const API= import.meta.env.VITE_API;
+    const API = import.meta.env.VITE_API;
+    console.log("API URL:", API);
     const handlePayment = async (plan, amount) => {
-    const token = localStorage.getItem("token");
-    const orderRes = await fetch(`${API}/api/payment/create-order`, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({ amount })
-    });
-    const order = await orderRes.json();
-    const options = {
-        key: "rzp_test_SXnGN9aNaQwEHb",
-        amount: order.amount,
-        currency: "INR",
-        order_id: order.id,
-        handler: async function (response) {
-            await fetch(`${API}/api/payment/verify`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${token}`
-                },
-                body: JSON.stringify({
-                    ...response,
-                    plan
-                })
-            });
-            alert("Payment successful!");
-        },
+        const token = localStorage.getItem("token");
+        const orderRes = await fetch(`${API}/api/payment/create-order`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`
+            },
+            body: JSON.stringify({ amount })
+        });
+        const order = await orderRes.json();
+        const options = {
+            key: "rzp_test_SXnGN9aNaQwEHb",
+            amount: order.amount,
+            currency: "INR",
+            order_id: order.id,
+            handler: async function (response) {
+                console.log("CALLING VERIFY API");
+                try {
+                    const res = await fetch(`${API}/api/payment/verify`, {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            Authorization: `Bearer ${token}`
+                        },
+                        body: JSON.stringify({
+                            ...response,
+                            plan
+                        })
+                    });
+                    const data = await res.json();
+                    console.log("VERIFY RESPONSE:", data);
+                    if (!res.ok) {
+                        alert("Payment verification failed");
+                        return;
+                    }
+                    await fetch(`${API}/api/profile`, {
+                        headers: {
+                            Authorization: `Bearer ${token}`
+                        }
+                    })
+                        .then(res => res.json())
+                        .then(data => {
+                            localStorage.setItem("user", JSON.stringify(data));
+                        });
+                    alert("Payment successful");
+                    window.location.reload();
+                } catch (err) {
+                    console.error("VERIFY ERROR:", err);
+                    alert("Something went wrong");
+                }
+            },
+        };
+        const rzp = new window.Razorpay(options);
+        rzp.open();
     };
-    const rzp = new window.Razorpay(options);
-    rzp.open();
-};
     return (
-        
+
         <div className='subscriptions-page'>
             <nav className="S-top-navbar">
                 <div className="S-nav-left">
@@ -135,7 +158,7 @@ const Subscriptions = () => {
                                     <li>Download offline</li>
                                     <li>Very high quality</li>
                                 </ul>
-                                <button  onClick={() => handlePayment("standard", 199)}>Try 2 months</button>
+                                <button onClick={() => handlePayment("standard", 199)}>Try 2 months</button>
                             </div>
                             <div className="S-plan-card platinum">
                                 <h3>Premium</h3>
