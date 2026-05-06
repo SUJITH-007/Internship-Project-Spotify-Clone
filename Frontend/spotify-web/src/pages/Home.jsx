@@ -1033,7 +1033,7 @@ const Home = () => {
                                     </div>
                                 ))}
                             </div>
-                             <section className="home_section">
+                            <section className="home_section">
                                 <div className="main_footer">
                                     <div className="footer_columns">
                                         <div className="footer-column">
@@ -1113,7 +1113,7 @@ const Home = () => {
                                     <p>{p.name}</p>
                                 </div>
                             ))}
-                             <section className="home_section">
+                            <section className="home_section">
                                 <div className="main_footer">
                                     <div className="footer_columns">
                                         <div className="footer-column">
